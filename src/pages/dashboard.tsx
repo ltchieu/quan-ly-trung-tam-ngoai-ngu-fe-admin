@@ -10,12 +10,10 @@ import {
 } from "@mui/material";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import PeopleIcon from "@mui/icons-material/People";
-import InsertChartIcon from "@mui/icons-material/InsertChart";
 import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
 import { SummaryCard } from "../component/summary_card";
 import { SalesChart } from "../component/sale_card";
 import { TrafficSourceChart } from "../component/traffic_source";
-import { Sidebar } from "../component/sidebar";
 
 const DashboardPage: React.FC = () => {
   return (

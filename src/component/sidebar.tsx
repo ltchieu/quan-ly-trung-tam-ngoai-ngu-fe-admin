@@ -22,7 +22,7 @@ const drawerWidth = 280;
 
 const navItems = [
   { text: "Overview", icon: <DashboardIcon />, path: "/" },
-  { text: "Khóa học", icon: <PeopleIcon />, path: "/course" },
+  { text: "Khóa học", icon: <PeopleIcon />, path: "/courses" },
   { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   { text: "Account", icon: <AccountBoxIcon />, path: "/account" },
 ];

@@ -85,3 +85,8 @@ export function uploadImage(file: File) {
 export function getImageUrl(fileName: string): string{
   return `${axiosClient.defaults.baseURL}/files/${fileName}`;
 }
+
+export function changeCourseStatus(courseId: number) {
+  const url = `/courses/status/${courseId}`;
+  return axiosClient.post(url);
+}

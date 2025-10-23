@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Thêm useCallback
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Container, Typography, Tabs, Tab, Button, Paper, CircularProgress, Alert } from '@mui/material';
-import { NewCourseState } from './add_course';
 import { ModuleData } from '../model/module_model';
 import { getCourseDetail, getModulesByCourseId } from '../services/course_service';
 import EditCurriculum from '../component/edit_curriculum';
 import EditCourseInfo from '../component/edit_course_infor';
 import EditContentDetails from '../component/edit_content_details';
+import { CourseDetails } from '../model/course_model';
 
 const EditCourse: React.FC = () => {
-    const { courseId } = useParams<{ courseId: string }>();
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
     // State cho thông tin cơ bản của khóa học
-    const [courseBaseData, setCourseBaseData] = useState<Partial<NewCourseState>>({});
+    const [courseBaseData, setCourseBaseData] = useState<Partial<CourseDetails>>({});
 
     // State riêng cho danh sách modules
     const [modules, setModules] = useState<ModuleData[]>([]);
@@ -23,16 +23,16 @@ const EditCourse: React.FC = () => {
     const [activeTab, setActiveTab] = useState(0);
 
     // Hàm fetch dữ liệu ban đầu
-    const fetchData = useCallback(async () => { // Dùng useCallback
-        if (!courseId) {
+    const fetchData = useCallback(async () => {
+        if (!id) {
             setError("Không tìm thấy ID khóa học.");
             setLoading(false);
             return;
         }
         setLoading(true);
-        setError(null); // Reset lỗi trước khi fetch
+        setError(null);
         try {
-            const courseIdNum = Number(courseId);
+            const courseIdNum = Number(id);
             // Fetch song song
             const [courseRes, modulesRes] = await Promise.all([
                 getCourseDetail(courseIdNum),
@@ -66,7 +66,7 @@ const EditCourse: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [courseId]);
+    }, [id]);
 
     // Gọi fetchData khi component mount hoặc courseId thay đổi
     useEffect(() => {
@@ -113,24 +113,21 @@ const EditCourse: React.FC = () => {
             </Box>
 
             {/* Tab Panels */}
-            {/* Truyền dữ liệu và hàm cập nhật/refresh tương ứng */}
             <div role="tabpanel" hidden={activeTab !== 0} id="edit-panel-0" aria-labelledby="edit-tab-0">
                  {activeTab === 0 &&
                     <EditCourseInfo
-                        courseId={Number(courseId)}
-                        // Truyền dữ liệu ban đầu cho form (cast về NewCourseState nếu cần)
-                        initialData={courseBaseData as NewCourseState}
-                        // Có thể thêm onSaveSuccess={handleDataNeedsRefresh} nếu cần cập nhật lại tên ở tiêu đề
+                        courseId={Number(id)}
+                        initialData={courseBaseData as CourseDetails}
+                        onSaveSuccess={handleDataNeedsRefresh}
                     />
                  }
             </div>
-            <div role="tabpanel" hidden={activeTab !== 1} id="edit-panel-1">
+            {/* <div role="tabpanel" hidden={activeTab !== 1} id="edit-panel-1">
                  {activeTab === 1 &&
                     <EditCurriculum
                         courseId={Number(courseId)}
-                        initialModules={modules} // Truyền modules
-                        objectives={courseBaseData.muctieu || []} // Truyền objectives
-                        // Gọi hàm refresh khi có thay đổi module
+                        initialModules={modules} 
+                        objectives={courseBaseData.muctieu || []}
                         onModulesChange={handleDataNeedsRefresh}
                         // Truyền hàm setData cho objectives nếu cần xử lý lưu ở đây
                         // setDataObjectives={(newObjectives) => setCourseBaseData(prev => ({...prev, muctieu: newObjectives}))}
@@ -140,15 +137,12 @@ const EditCourse: React.FC = () => {
              <div role="tabpanel" hidden={activeTab !== 2} id="edit-panel-2">
                  {activeTab === 2 &&
                     <EditContentDetails
-                         modules={modules} // Truyền modules
-                         // Gọi hàm refresh khi có thay đổi content/doc trong module
+                         modules={modules} 
                          onModulesChange={handleDataNeedsRefresh}
                     />
                  }
-            </div>
+            </div> */}
 
-            {/* Không còn nút Save tổng */}
-            {/* Có thể thêm nút Quay lại nếu muốn */}
              <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 4 }}>
                 <Button onClick={() => navigate('/courses')}>Quay lại danh sách</Button>
             </Box>

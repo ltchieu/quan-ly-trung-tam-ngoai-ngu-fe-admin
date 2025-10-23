@@ -1,3 +1,5 @@
+import { DocumentData } from "../pages/add_course";
+
 export interface Objective {
   id: number;
   objectiveName: string;
@@ -62,6 +64,31 @@ export interface CourseCreateRequest {
       contentName: string;
     }[]; 
 }[]
+}
+
+export interface CourseDetails {
+  // Bảng khoahoc
+  tenkhoahoc: string;
+  sogiohoc: number;
+  hocphi: number;
+  sobuoihoc: number;
+  video: string;
+  description: string;
+  entryLevel: string;
+  targetLevel: string;
+  image: string;
+  trangthai: boolean;
+
+  // Bảng muctieukh
+  muctieu: { tenmuctieu: string }[];
+
+  // Bảng module và các bảng con
+  modules: {
+    tenmodule: string;
+    thoiluong: number;
+    noidung: { tennoidung: string }[];
+    tailieu: DocumentData[];
+  }[];
 }
 
 export interface CourseUpdateRequest {

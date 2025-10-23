@@ -20,12 +20,12 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import { CourseModel } from "../model/course_model";
-import { getAllCourse } from "../services/course_service";
+import { changeCourseStatus, getAllCourse } from "../services/course_service";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare } from "@fortawesome/free-regular-svg-icons";
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faLock, faLockOpen, faTrash } from "@fortawesome/free-solid-svg-icons";
 import EditCourse from "./edit_course";
 
 const Course: React.FC = () => {
@@ -56,20 +56,20 @@ const Course: React.FC = () => {
     },
   };
 
-  useEffect(() => {
-    const fetchCourse = async () => {
-      setLoading(true);
-      try {
-        const res = await getAllCourse(page, rowsPerPage);
-        setCourses(res.data.data.courses);
-        setTotalItems(res.data.data.totalItems);
-      } catch (error) {
-        console.error("Lỗi khi tải khóa học:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchCourse = async () => {
+    setLoading(true);
+    try {
+      const res = await getAllCourse(page, rowsPerPage);
+      setCourses(res.data.data.courses);
+      setTotalItems(res.data.data.totalItems);
+    } catch (error) {
+      console.error("Lỗi khi tải khóa học:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchCourse();
   }, [page, rowsPerPage]);
 
@@ -115,6 +115,18 @@ const Course: React.FC = () => {
     setPage(0);
   };
 
+  const handleToggleStatus = async (id: number) => {
+    try {
+      const res = await changeCourseStatus(id);
+      console.log(res.data.data);
+      alert("Đổi trạng thái thành công!");
+      fetchCourse();
+    } catch (err) {
+      console.error("Lỗi khi đổi trạng thái:", err);
+      alert("Có lỗi xảy ra, vui lòng thử lại.");
+    }
+  };
+
   const formatStateOfCourse = (state: boolean) => {
     if (state === true) {
       return "Đang mở";
@@ -149,7 +161,7 @@ const Course: React.FC = () => {
             onClick={() => {
               navigate("/addCourse");
             }}
-            sx={{backgroundColor: "#635bff", borderRadius: 3}}
+            sx={{ backgroundColor: "#635bff", borderRadius: 3 }}
           >
             Add
           </Button>
@@ -247,11 +259,22 @@ const Course: React.FC = () => {
                         {formatStateOfCourse(course.isActive)}
                       </TableCell>
                       <TableCell>
-                        <IconButton onClick={() => {navigate(`/editCourse/${course.courseId}`)}}>
+                        <IconButton
+                          onClick={() => {
+                            navigate(`/editCourse/${course.courseId}`);
+                          }}
+                        >
                           <FontAwesomeIcon icon={faPenToSquare} color="green" />
                         </IconButton>
                         <IconButton>
                           <FontAwesomeIcon icon={faTrash} color="red" />
+                        </IconButton>
+                        <IconButton onClick={() => {handleToggleStatus(course.courseId)}}>
+                          {course.isActive ? (
+                            <FontAwesomeIcon icon={faLock} color="black" />
+                          ) : (
+                            <FontAwesomeIcon icon={faLockOpen} color="black" />
+                          )}
                         </IconButton>
                       </TableCell>
                     </TableRow>
