@@ -26,6 +26,7 @@ import dayjs from "dayjs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare } from "@fortawesome/free-regular-svg-icons";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import EditCourse from "./edit_course";
 
 const Course: React.FC = () => {
   // State để quản lý các hàng được chọn, phân trang
@@ -246,7 +247,7 @@ const Course: React.FC = () => {
                         {formatStateOfCourse(course.isActive)}
                       </TableCell>
                       <TableCell>
-                        <IconButton>
+                        <IconButton onClick={() => {navigate(`/editCourse/${course.courseId}`)}}>
                           <FontAwesomeIcon icon={faPenToSquare} color="green" />
                         </IconButton>
                         <IconButton>

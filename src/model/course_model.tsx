@@ -63,3 +63,30 @@ export interface CourseCreateRequest {
     }[]; 
 }[]
 }
+
+export interface CourseUpdateRequest {
+  courseName: string;
+  tuitionFee: number;
+  video: string;
+  description: string;
+  entryLevel: string;
+  targetLevel: string;
+  image: string;
+  // Objectives có thể gửi ở đây nếu backend xử lý
+  // objectives?: { objectiveName: string }[];
+}
+
+export interface ModuleUpdateRequest {
+  moduleName: string;
+  duration: number;
+  documents?: {
+    fileName: string;
+    link: string;
+    description: string;
+    image: string;
+  }[];
+  contents?: {
+    title: string;
+    description: string;
+  }[];
+}

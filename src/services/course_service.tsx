@@ -1,5 +1,6 @@
 import { axiosClient, axiosMultipart } from "../api/axios_client";
-import { CourseCreateRequest } from "../model/course_model";
+import { CourseCreateRequest, CourseUpdateRequest, ModuleUpdateRequest } from "../model/course_model";
+import { ModuleData } from "../model/module_model";
 import { NewCourseState } from "../pages/add_course";
 
 export function getAllCourse(page: number, size: number) {
@@ -9,6 +10,30 @@ export function getAllCourse(page: number, size: number) {
       size: size
     }
   });
+}
+
+export function getCourseDetail(id?: number){
+    return axiosClient.get(`/courses/${id}`)
+}
+
+export function updateCourse(courseId: number, updateData: CourseUpdateRequest) {
+  return axiosClient.put(`/courses/${courseId}`, updateData);
+}
+
+export function getModulesByCourseId(courseId: number) {
+  return axiosClient.get<ModuleData[]>("/modules", { params: { courseId } });
+}
+
+export function updateModule(moduleId: number, updateData: ModuleUpdateRequest) {
+  return axiosClient.put(`/modules/${moduleId}`, updateData);
+}
+
+export function createModule(courseId: number, moduleData: { moduleName: string; duration: number }) {
+    return axiosClient.post("/modules", { ...moduleData, courseId });
+}
+
+export function deleteModule(moduleId: number) {
+    return axiosClient.delete(`/modules/${moduleId}`);
 }
 
 //Tạo khóa học
