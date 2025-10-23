@@ -122,14 +122,13 @@ const EditCourse: React.FC = () => {
                     />
                  }
             </div>
-            {/* <div role="tabpanel" hidden={activeTab !== 1} id="edit-panel-1">
+            <div role="tabpanel" hidden={activeTab !== 1} id="edit-panel-1">
                  {activeTab === 1 &&
                     <EditCurriculum
-                        courseId={Number(courseId)}
+                        courseId={Number(id)}
                         initialModules={modules} 
                         objectives={courseBaseData.muctieu || []}
                         onModulesChange={handleDataNeedsRefresh}
-                        // Truyền hàm setData cho objectives nếu cần xử lý lưu ở đây
                         // setDataObjectives={(newObjectives) => setCourseBaseData(prev => ({...prev, muctieu: newObjectives}))}
                     />
                  }
@@ -141,7 +140,7 @@ const EditCourse: React.FC = () => {
                          onModulesChange={handleDataNeedsRefresh}
                     />
                  }
-            </div> */}
+            </div>
 
              <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 4 }}>
                 <Button onClick={() => navigate('/courses')}>Quay lại danh sách</Button>

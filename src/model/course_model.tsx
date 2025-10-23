@@ -113,7 +113,7 @@ export interface ModuleUpdateRequest {
     image: string;
   }[];
   contents?: {
-    title: string;
-    description: string;
+    id: number;
+    contentName: string;
   }[];
 }

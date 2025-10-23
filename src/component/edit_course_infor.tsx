@@ -114,7 +114,8 @@ const EditCourseInfo: React.FC<Props> = ({
   const handleImageUploadSuccess = (fileName: string) => {
     setFormData((prev) => ({ ...prev, image: fileName }));
     setImgUrl(getImageUrl(fileName));
-    setSaveSuccess(false); // Reset thông báo thành công
+    setIsSuccess(true)
+    setSaveSuccess(false);
   };
 
   const handleFocusSelect = (event: React.FocusEvent<HTMLInputElement>) => {

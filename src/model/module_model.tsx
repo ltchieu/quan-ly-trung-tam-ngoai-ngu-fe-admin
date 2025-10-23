@@ -1,9 +1,9 @@
-interface ContentData {
+export interface ContentData {
   id: number;          
   contentName: string; 
 }
 
-interface DocumentDataForModule {
+export interface DocumentDataForModule {
   documentId: number; 
   fileName: string;
   link: string;
