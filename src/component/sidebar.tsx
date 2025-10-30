@@ -23,12 +23,12 @@ const drawerWidth = 280;
 const navItems = [
   { text: "Overview", icon: <DashboardIcon />, path: "/" },
   { text: "Khóa học", icon: <PeopleIcon />, path: "/courses" },
-  { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
+  { text: "Lớp học", icon: <SettingsIcon />, path: "/class" },
   { text: "Account", icon: <AccountBoxIcon />, path: "/account" },
 ];
 
 export const Sidebar: React.FC = () => {
-  // ✅ 3. Lấy đường dẫn hiện tại từ URL
+  
   const location = useLocation();
 
   return (
