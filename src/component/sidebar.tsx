@@ -28,7 +28,7 @@ const navItems = [
 ];
 
 export const Sidebar: React.FC = () => {
-  // ✅ 3. Lấy đường dẫn hiện tại từ URL
+  
   const location = useLocation();
 
   return (
