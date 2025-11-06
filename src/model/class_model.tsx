@@ -33,3 +33,10 @@ export interface ClassCreationRequest {
   startDate: string;
   note?: string;
 }
+
+export interface CheckConflictRequest {
+  schedulePattern: string;
+  startTime: string;
+  durationMinutes: number;
+  startDate: string;
+}
