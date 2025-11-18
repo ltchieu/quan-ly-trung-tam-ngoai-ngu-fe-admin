@@ -54,6 +54,60 @@ const DAY_OPTIONS = [
   { label: "CN", value: "1" },
 ];
 
+const suggestDuration = (sessionsPerWeek: number) => {
+  switch (sessionsPerWeek) {
+    case 1:
+      return 120;
+    case 2:
+    case 3:
+      return 90;
+    case 4:
+      return 60;
+    default:
+      return 30; // 5-6 buổi
+  }
+};
+
+const countSessionsPerWeek = (pattern: string) =>
+  pattern ? pattern.split("-").filter(Boolean).length : 0;
+
+// --- Lấy mã thứ từ ngày ---
+const getDayValueFromDate = (dateString: string): string | null => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return null;
+
+  const day = date.getDay();
+  return day === 0 ? "1" : String(day + 1);
+};
+
+// --- Lấy tên hiển thị của thứ ---
+const getDayLabelFromValue = (val: string) => {
+  const option = DAY_OPTIONS.find((o) => o.value === val);
+  return option ? option.label : val;
+};
+
+const getSessionCode = (timeString: string): string => {
+  if (!timeString) return "";
+  const hour = parseInt(timeString.split(":")[0], 10);
+
+  if (hour < 12) return "S";
+  if (hour < 18) return "C";
+  return "T";
+};
+
+const formatMonthYear = (dateString: string): string => {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${month}/${year}`;
+  } catch (e) {
+    return "";
+  }
+};
+
 const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   const [courses, setCourses] = useState<CourseFilterData[]>([]);
 
@@ -70,6 +124,9 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
 
   const [isCreating, setIsCreating] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [durationSuggestion, setDurationSuggestion] = useState<number | null>(
+    null
+  );
 
   const resetAllState = () => {
     // Reset Formik về initialValues
@@ -107,6 +164,37 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       courseId: Yup.string().required("Bắt buộc chọn khóa học"),
       className: Yup.string().required("Bắt buộc nhập tên lớp"),
       startDate: Yup.string().required("Bắt buộc chọn ngày bắt đầu"),
+      schedulePattern: Yup.string()
+        .required("Bắt buộc chọn lịch học")
+        .test(
+          "match-start-date",
+          "Ngày bắt đầu không khớp với lịch học đã chọn",
+          function (value) {
+            const { startDate } = this.parent;
+            if (!startDate || !value) return true;
+
+            const startDayVal = getDayValueFromDate(startDate);
+            const selectedDays = value.split("-");
+
+            if (startDayVal && !selectedDays.includes(startDayVal)) {
+              const dayLabel = getDayLabelFromValue(startDayVal);
+              return this.createError({
+                message: `Ngày bắt đầu (${startDate}) là ${dayLabel}, nhưng lịch học chưa chọn ${dayLabel}.`,
+              });
+            }
+            return true;
+          }
+        ),
+      durationMinutes: Yup.number()
+        .typeError("Số phút phải là số")
+        .required("Vui lòng nhập số phút mỗi buổi")
+        .integer("Số phút phải là số nguyên")
+        .min(30, "Mỗi buổi phải ít nhất 30 phút")
+        .test(
+          "divisible-by-30",
+          "Số phút phải chia hết cho 30",
+          (value) => value !== undefined && value % 30 === 0
+        ),
       roomId: Yup.string().required("Bắt buộc chọn phòng"),
       lecturerId: Yup.string().required("Bắt buộc chọn giảng viên"),
     }),
@@ -142,9 +230,89 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
     },
   });
 
-  // Logic: Khi user đổi ngày/giờ bằng tay -> Reset danh sách gợi ý cũ để tránh sai lệch
+  const {
+    values,
+    setFieldValue,
+    handleChange,
+    errors,
+    touched,
+    setFieldTouched,
+  } = formik;
+
+  useEffect(() => {
+    const { courseId, startDate, startTime, schedulePattern } = values;
+
+    if (courseId && startDate && startTime) {
+      // 1. Lấy tên khóa học
+      const selectedCourse = courses.find(
+        (c) => c.courseId === Number(courseId)
+      );
+
+      if (selectedCourse) {
+        const cleanCourseName = selectedCourse.courseName.replace(
+          /^Khóa\s+/i,
+          ""
+        );
+
+        const timeStr = formatMonthYear(startDate);
+
+        const sessionCode = getSessionCode(startTime);
+
+        const newClassName = `Lớp ${cleanCourseName} - ${timeStr} - ${sessionCode}`;
+
+        setFieldValue("className", newClassName);
+      }
+    }
+
+    if (startDate) {
+      const dayVal = getDayValueFromDate(startDate);
+      if (dayVal) {
+        const currentDays = schedulePattern
+          ? schedulePattern.split("-").filter(Boolean)
+          : [];
+        if (!currentDays.includes(dayVal)) {
+          const newDays = [...currentDays, dayVal];
+          // Sắp xếp lại để pattern chuẩn (VD: 2-4-6)
+          const sortedPattern = DAY_OPTIONS.map((opt) => opt.value)
+            .filter((val) => newDays.includes(val))
+            .join("-");
+
+          setFieldValue("schedulePattern", sortedPattern);
+          setFieldTouched("schedulePattern", true);
+
+          // Reset trạng thái check vì pattern thay đổi
+          setAvailableRooms([]);
+          setAvailableLecturers([]);
+          setSuggestionResult(null);
+        }
+      }
+    }
+  }, [
+    values.courseId,
+    values.startDate,
+    values.startTime,
+    courses,
+    setFieldValue,
+  ]);
+
+  useEffect(() => {
+    if (!formik.values.startDate) return;
+
+    formik.setFieldTouched("schedulePattern", true, false);
+    formik.validateField("schedulePattern");
+  }, [formik.values.schedulePattern, formik.values.startDate]);
+
+  // Khi user đổi ngày/giờ bằng tay -> Reset danh sách gợi ý cũ để tránh sai lệch
   const handleManualChange = (e: React.ChangeEvent<any>) => {
     formik.handleChange(e);
+
+    if (e.target.name === "startDate") {
+      setTimeout(() => {
+        formik.validateField("schedulePattern");
+        formik.setFieldTouched("schedulePattern", true, true);
+      }, 0);
+    }
+
     // Nếu thay đổi các trường ảnh hưởng lịch, clear danh sách available cũ
     if (
       ["startDate", "startTime", "schedulePattern", "durationMinutes"].includes(
@@ -161,12 +329,12 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   };
 
   const handleDayChange = (dayValue: string, isChecked: boolean) => {
-    //Lấy mảng các ngày hiện tại từ chuỗi pattern
+    // Lấy mảng các ngày hiện tại từ chuỗi pattern
     let currentDays = formik.values.schedulePattern
       ? formik.values.schedulePattern.split("-").filter(Boolean)
       : [];
 
-    //Cập nhật mảng dựa trên thao tác check/uncheck
+    // Cập nhật mảng dựa trên thao tác check/uncheck
     if (isChecked) {
       if (!currentDays.includes(dayValue)) currentDays.push(dayValue);
     } else {
@@ -178,15 +346,40 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       .filter((val) => currentDays.includes(val))
       .join("-");
 
-    //Cập nhật Formik
-    formik.setFieldValue("schedulePattern", sortedPattern);
+    // Cập nhật Formik
+    formik.setFieldValue("schedulePattern", sortedPattern, true);
+    formik.setFieldTouched("schedulePattern", true, true);
 
-    //Reset trạng thái gợi ý/phòng/gv (Giống như handleManualChange)
+    setTimeout(() => {
+      formik.validateField("schedulePattern");
+    }, 0);
+
+    // Reset trạng thái gợi ý/phòng/gv
     setAvailableRooms([]);
     setAvailableLecturers([]);
     setSuggestionResult(null);
     formik.setFieldValue("roomId", "");
     formik.setFieldValue("lecturerId", "");
+  };
+
+  // Gợi ý tự động khi schedulePattern thay đổi
+  useEffect(() => {
+    const sessions = countSessionsPerWeek(formik.values.schedulePattern);
+
+    if (sessions > 0) {
+      const suggested = suggestDuration(sessions);
+      setDurationSuggestion(suggested);
+    } else {
+      setDurationSuggestion(null);
+    }
+  }, [formik.values.schedulePattern]);
+
+  //Apply gợi ý
+  const applyDurationSuggestion = () => {
+    if (durationSuggestion) {
+      formik.setFieldValue("durationMinutes", durationSuggestion, true);
+      formik.setFieldTouched("durationMinutes", true, true);
+    }
   };
 
   // --- LOGIC CHÍNH: KIỂM TRA VÀ GỢI Ý ---
@@ -205,6 +398,10 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       alert(
         "Vui lòng nhập đầy đủ thông tin khóa học và thời gian trước khi kiểm tra."
       );
+      return;
+    }
+
+    if (errors.schedulePattern) {
       return;
     }
 
@@ -279,7 +476,7 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         <Box component="form" onSubmit={formik.handleSubmit} sx={{ mt: 1 }}>
           <Grid container spacing={2}>
             {/* --- 1. THÔNG TIN CƠ BẢN --- */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 select
                 fullWidth
@@ -298,20 +495,6 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
                   </MenuItem>
                 ))}
               </TextField>
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Tên lớp"
-                name="className"
-                value={formik.values.className}
-                onChange={formik.handleChange}
-                error={
-                  formik.touched.className && Boolean(formik.errors.className)
-                }
-                helperText={formik.touched.className && formik.errors.className}
-              />
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
@@ -338,18 +521,101 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
               />
             </Grid>
 
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                type="number"
+                label="Số phút học mỗi buổi"
+                InputLabelProps={{ shrink: true }}
+                name="durationMinutes"
+                value={formik.values.durationMinutes}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.durationMinutes &&
+                  Boolean(formik.errors.durationMinutes)
+                }
+                helperText={
+                  formik.touched.durationMinutes &&
+                  formik.errors.durationMinutes
+                }
+              />
+
+              {durationSuggestion && (
+                <Box
+                  onClick={applyDurationSuggestion}
+                  sx={{
+                    mt: 0.5,
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: 1,
+                    display: "inline-block",
+                    cursor: "pointer",
+                    bgcolor: "yellow.100",
+                    color: "grey.800",
+                    fontSize: "0.85rem",
+                    transition: "0.2s",
+                    "&:hover": {
+                      bgcolor: "yellow.200",
+                      boxShadow: 1,
+                    },
+                    "&:active": {
+                      bgcolor: "yellow.300",
+                    },
+                  }}
+                >
+                  Gợi ý: <b>{durationSuggestion} phút</b> mỗi buổi (dựa trên{" "}
+                  {countSessionsPerWeek(formik.values.schedulePattern)}{" "}
+                  buổi/tuần)
+                  <Box
+                    component="span"
+                    sx={{ ml: 1, fontWeight: 600, color: "blue" }}
+                  >
+                    Nhấn để áp dụng
+                  </Box>
+                </Box>
+              )}
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                disabled
+                label="Tên lớp"
+                name="className"
+                value={values.className}
+                error={
+                  formik.touched.className && Boolean(formik.errors.className)
+                }
+                helperText={formik.touched.className && formik.errors.className}
+                sx={{
+                  "& .MuiInputBase-input.Mui-disabled": {
+                    WebkitTextFillColor: "rgba(0, 0, 0, 0.87)",
+                    color: "rgba(0, 0, 0, 0.87)",
+                    fontWeight: 500,
+                  },
+                  "& .MuiInputLabel-root.Mui-disabled": {
+                    color: "rgba(0, 0, 0, 0.6)",
+                  },
+                  "& .MuiOutlinedInput-root.Mui-disabled": {
+                    backgroundColor: "#f5f5f5",
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "rgba(0, 0, 0, 0.23) !important",
+                  },
+                }}
+              />
+            </Grid>
+
             <Grid size={{ xs: 12 }}>
               <FormControl
                 component="fieldset"
                 variant="standard"
                 error={
-                  formik.touched.schedulePattern &&
-                  Boolean(formik.errors.schedulePattern)
+                  touched.schedulePattern && Boolean(errors.schedulePattern)
                 }
               >
-                <FormLabel component="legend">
-                  Lịch học trong tuần (Pattern: {formik.values.schedulePattern})
-                </FormLabel>
+                <FormLabel component="legend">Lịch học trong tuần</FormLabel>
                 <FormGroup row>
                   {DAY_OPTIONS.map((day) => {
                     const isChecked = formik.values.schedulePattern
@@ -376,12 +642,19 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
                   })}
                 </FormGroup>
                 {/* Hiển thị lỗi nếu chưa chọn ngày nào */}
-                {formik.touched.schedulePattern &&
-                  formik.errors.schedulePattern && (
-                    <Typography variant="caption" color="error">
-                      {formik.errors.schedulePattern}
-                    </Typography>
-                  )}
+                {touched.schedulePattern && errors.schedulePattern && (
+                  <Typography
+                    variant="caption"
+                    color="error"
+                    sx={{ ml: 1.5, mt: 0.5, fontWeight: "medium" }}
+                  >
+                    <FontAwesomeIcon
+                      icon={faCalendar}
+                      style={{ marginRight: 4 }}
+                    />
+                    {errors.schedulePattern}
+                  </Typography>
+                )}
               </FormControl>
             </Grid>
 
