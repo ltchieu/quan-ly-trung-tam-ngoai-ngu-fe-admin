@@ -13,6 +13,7 @@ import {
   SelectChangeEvent,
   Checkbox,
   ListItemText,
+  Typography,
 } from "@mui/material";
 import { NewCourseState } from "../pages/add_course";
 import { getAllSkills } from "../services/course_service";
@@ -35,7 +36,6 @@ const Step1CourseInfo: React.FC<Props> = ({ data, setData }) => {
   const allSkillIds = skills.map((s) => s.id);
   const isAllSkillsSelected =
     allSkillIds.length > 0 && data.skillIds.length === allSkillIds.length;
-
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -100,7 +100,11 @@ const Step1CourseInfo: React.FC<Props> = ({ data, setData }) => {
           setData((prev) => ({ ...prev, skillIds: allSkillIds }));
         }
       } else {
-        setData((prev) => ({ ...prev, skillIds: selectedValues.map((v) => Number(v)) }));
+        setData((prev) => ({
+          ...prev,
+
+          skillIds: selectedValues.map((v) => Number(v)),
+        }));
       }
     } else {
       setData((prev) => ({
@@ -108,6 +112,29 @@ const Step1CourseInfo: React.FC<Props> = ({ data, setData }) => {
         [name]: value,
       }));
     }
+  };
+
+  const handleSkillHourChange = (skillId: number, value: string) => {
+    const hours = value === "" ? 0 : Number(value);
+
+    setData((prev) => {
+      const exists = prev.skillHours?.some((item) => item.skillId === skillId);
+      
+      let newSkillHours;
+      
+      if (exists) {
+        newSkillHours = prev.skillHours.map((item) =>
+          item.skillId === skillId ? { ...item, hours: hours } : item
+        );
+      } else {
+        newSkillHours = [...(prev.skillHours || []), { skillId, hours }];
+      }
+
+      return {
+        ...prev,
+        skillHours: newSkillHours,
+      };
+    });
   };
 
   const handleLinkYoutube = (link: string) => {
@@ -132,17 +159,21 @@ const Step1CourseInfo: React.FC<Props> = ({ data, setData }) => {
   const getErrorProps = (fieldName: keyof NewCourseState) => {
     let value = data[fieldName];
     if (fieldName === "skillIds") {
-        return {
-            error: data.skillIds.length === 0,
-            helperText: data.skillIds.length === 0 ? "Vui lòng chọn ít nhất 1 kỹ năng" : "",
-        };
+      return {
+        error: data.skillIds.length === 0,
+        helperText:
+          data.skillIds.length === 0 ? "Vui lòng chọn ít nhất 1 kỹ năng" : "",
+      };
     }
 
-    if(fieldName === "sogiohoc"){
+    if (fieldName === "sogiohoc") {
       return {
         error: (data.sogiohoc * 60) % 30 != 0,
-        helperText: (data.sogiohoc * 60) % 30 != 0 ? "Tổng số giờ học phải chia hết cho 30 vì mỗi buổi học ít nhất là 30 phút" : ""
-      }
+        helperText:
+          (data.sogiohoc * 60) % 30 != 0
+            ? "Tổng số giờ học phải chia hết cho 30 vì mỗi buổi học ít nhất là 30 phút"
+            : "",
+      };
     }
 
     if (typeof value === "string" && value.trim() === "") {
@@ -160,8 +191,29 @@ const Step1CourseInfo: React.FC<Props> = ({ data, setData }) => {
     return { error: false, helperText: " " };
   };
 
+  const totalSkillHours =
+    data.skillHours?.reduce((sum, x) => sum + (x.hours || 0), 0) || 0;
+
   return (
     <Grid container spacing={3}>
+      <Grid size={{ xs: 12, sm: 6 }}>
+        <TextField
+          required
+          name="sogiohoc"
+          label="Tổng số giờ học"
+          type="number"
+          fullWidth
+          value={data.sogiohoc || ""}
+          onChange={handleChange}
+          {...getErrorProps("sogiohoc")}
+          helperText={
+            getErrorProps("sogiohoc").error
+              ? getErrorProps("sogiohoc").helperText
+              : "Tổng số giờ học của toàn khóa"
+          }
+        />
+      </Grid>
+
       <Grid size={{ xs: 12, md: 6 }}>
         <TextField
           select
@@ -183,6 +235,31 @@ const Step1CourseInfo: React.FC<Props> = ({ data, setData }) => {
             </MenuItem>
           ))}
         </TextField>
+      </Grid>
+
+      <Grid size={{ xs: 12 }}>
+        <TextField
+          required
+          name="tenkhoahoc"
+          label="Tên khóa học"
+          fullWidth
+          value={data.tenkhoahoc}
+          onChange={handleChange}
+          {...getErrorProps("tenkhoahoc")}
+        />
+      </Grid>
+
+      <Grid size={{ xs: 12, sm: 6 }}>
+        <TextField
+          required
+          name="hocphi"
+          label="Học phí (VNĐ)"
+          type="number"
+          fullWidth
+          value={data.hocphi || ""}
+          onChange={handleChange}
+          {...getErrorProps("hocphi")}
+        />
       </Grid>
 
       <Grid size={{ xs: 12, md: 6 }}>
@@ -230,47 +307,63 @@ const Step1CourseInfo: React.FC<Props> = ({ data, setData }) => {
         </FormControl>
       </Grid>
 
-      <Grid size={{ xs: 12 }}>
-        <TextField
-          required
-          name="tenkhoahoc"
-          label="Tên khóa học"
-          fullWidth
-          value={data.tenkhoahoc}
-          onChange={handleChange}
-          {...getErrorProps("tenkhoahoc")}
-        />
-      </Grid>
+      {data.skillIds.length > 0 && (
+        <Grid size={{ xs: 12 }}>
+          <Box sx={{ p: 2, border: "1px dashed #bbb", borderRadius: 2, mt: 1 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Thời lượng cho từng kỹ năng
+            </Typography>
 
-      <Grid size={{ xs: 12, sm: 6 }}>
-        <TextField
-          required
-          name="hocphi"
-          label="Học phí (VNĐ)"
-          type="number"
-          fullWidth
-          value={data.hocphi || ""}
-          onChange={handleChange}
-          {...getErrorProps("hocphi")}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6 }}>
-        <TextField
-          required
-          name="sogiohoc"
-          label="Tổng số giờ học"
-          type="number"
-          fullWidth
-          value={data.sogiohoc || ""}
-          onChange={handleChange}
-          {...getErrorProps("sogiohoc")}
-          helperText={
-            getErrorProps("sogiohoc").error
-              ? getErrorProps("sogiohoc").helperText
-              : "Tổng số giờ học của toàn khóa"
-          }
-        />
-      </Grid>
+            <Grid container spacing={2}>
+              {data.skillIds.map((skillId) => {
+                const skill = skills.find((s) => s.id === skillId);
+                const hourData = data.skillHours?.find(
+                  (h) => h.skillId === skillId
+                );
+                const hours = hourData ? hourData.hours : 0;
+
+                return (
+                  <Grid size={{ xs: 12, md: 6 }} key={skillId}>
+                    <TextField
+                      type="number"
+                      label={`Giờ học - ${skill?.skillName}`}
+                      fullWidth
+                      value={hours === 0 ? "" : hours}
+                      onChange={(e) => {
+                        handleSkillHourChange(skillId, e.target.value)
+                      }}
+                      error={hours <= 0}
+                      helperText={hours <= 0 ? "Số giờ phải > 0" : ""}
+                    />
+                  </Grid>
+                );
+              })}
+            </Grid>
+
+            {/* Tổng hợp lỗi */}
+            {totalSkillHours !== data.sogiohoc && (
+              <Typography color="error" sx={{ mt: 1, fontWeight: 600 }}>
+                {totalSkillHours < data.sogiohoc && (
+                  <>
+                    Bạn đã nhập <b>{totalSkillHours} giờ</b>, còn thiếu{" "}
+                    <b>{data.sogiohoc - totalSkillHours} giờ</b> để đủ{" "}
+                    {data.sogiohoc} giờ.
+                  </>
+                )}
+
+                {totalSkillHours > data.sogiohoc && (
+                  <>
+                    Bạn đã nhập <b>{totalSkillHours} giờ</b>, vượt quá{" "}
+                    <b>{totalSkillHours - data.sogiohoc} giờ</b> so với tổng{" "}
+                    {data.sogiohoc} giờ quy định.
+                  </>
+                )}
+              </Typography>
+            )}
+          </Box>
+        </Grid>
+      )}
+
       <Grid size={{ xs: 12 }}>
         <TextField
           required

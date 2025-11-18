@@ -42,7 +42,8 @@ export interface NewCourseState {
   targetLevel: string;
   image: string;
 
-   skillIds: number[];
+  skillIds: number[];
+  skillHours: { skillId: number; hours: number }[];
 
   // Bảng muctieukh
   muctieu: { tenmuctieu: string }[];
@@ -66,6 +67,7 @@ const CreateCoursePage: React.FC = () => {
     sogiohoc: 0,
     courseCategoryId: "",
     hocphi: 0,
+    skillHours: [], 
     video: "",
     description: "",
     entryLevel: "",

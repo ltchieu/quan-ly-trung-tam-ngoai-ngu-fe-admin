@@ -1,5 +1,4 @@
-// src/pages/admin/course/Step2_Curriculum.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   TextField,
   Button,
@@ -24,12 +23,7 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import { NewCourseState } from "../pages/add_course";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCheckCircle,
-  faClock,
-  faExclamationCircle,
-  faPen,
-} from "@fortawesome/free-solid-svg-icons";
+import { faClock, faPen } from "@fortawesome/free-solid-svg-icons";
 import { SkillResponse } from "../model/course_model";
 import { getAllSkills } from "../services/course_service";
 
@@ -42,6 +36,7 @@ interface EditingModule {
   index: number;
   tenmodule: string;
   duration: number;
+  skillId: number;
 }
 
 interface ModuleInputState {
@@ -59,6 +54,8 @@ const Step2Curriculum: React.FC<Props> = ({ data, setData }) => {
   const [editingModule, setEditingModule] = useState<EditingModule | null>(
     null
   );
+
+  const nameInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
   useEffect(() => {
     const fetchSkills = async () => {
@@ -106,6 +103,12 @@ const Step2Curriculum: React.FC<Props> = ({ data, setData }) => {
     }));
   };
 
+  // Build map of skillHours for quick lookup
+  const skillHoursMap = new Map<number, number>();
+  (data.skillHours || []).forEach((s) => {
+    skillHoursMap.set(s.skillId, s.hours);
+  });
+
   const handleAddModule = (skillId: number) => {
     const input = moduleInputs[skillId];
 
@@ -117,6 +120,18 @@ const Step2Curriculum: React.FC<Props> = ({ data, setData }) => {
     const durationVal = parseFloat(input.duration);
     if (!input.duration || isNaN(durationVal) || durationVal <= 0) {
       alert("Vui lòng nhập thời lượng hợp lệ (>0)");
+      return;
+    }
+
+    const expectedSkillHours = skillHoursMap.get(skillId) || 0;
+    const currentSkillHours = data.modules
+      .filter((m) => m.skillId === skillId)
+      .reduce((sum, m) => sum + (m.duration || 0), 0);
+
+    if (currentSkillHours + durationVal > expectedSkillHours) {
+      alert(
+        `Thêm module vượt quá số giờ cho kỹ năng này. Giới hạn: ${expectedSkillHours}h – Đã dùng: ${currentSkillHours}h`
+      );
       return;
     }
 
@@ -138,6 +153,12 @@ const Step2Curriculum: React.FC<Props> = ({ data, setData }) => {
       ...prev,
       [skillId]: { tenmodule: "", duration: "" },
     }));
+
+    setTimeout(() => {
+      if (nameInputRefs.current[skillId]) {
+        nameInputRefs.current[skillId]?.focus();
+      }
+    }, 0);
   };
 
   const handleRemoveModule = (globalIndex: number) => {
@@ -150,13 +171,14 @@ const Step2Curriculum: React.FC<Props> = ({ data, setData }) => {
 
   // --- Handlers cho Edit Module ---
   const handleOpenEditDialog = (
-    module: { tenmodule: string; duration?: number },
+    module: { tenmodule: string; duration?: number; skillId: number },
     index: number // index trong mảng gốc
   ) => {
     setEditingModule({
       index,
       tenmodule: module.tenmodule,
       duration: module.duration || 0,
+      skillId: module.skillId,
     });
     setEditDialogOpen(true);
   };
@@ -173,6 +195,20 @@ const Step2Curriculum: React.FC<Props> = ({ data, setData }) => {
     }
     if (editingModule.duration <= 0) {
       alert("Thời lượng phải lớn hơn 0.");
+      return;
+    }
+
+    // Validate against skillHours
+    const expected = skillHoursMap.get(editingModule.skillId) || 0;
+    const usedExceptThis = data.modules
+      .filter((_, i) => i !== editingModule.index)
+      .filter((m) => m.skillId === editingModule.skillId)
+      .reduce((s, m) => s + (m.duration || 0), 0);
+
+    if (usedExceptThis + editingModule.duration > expected) {
+      alert(
+        `Sửa module vượt quá số giờ cho kỹ năng này. Giới hạn: ${expected}h – Đã dùng (không tính module này): ${usedExceptThis}h`
+      );
       return;
     }
 
@@ -194,20 +230,10 @@ const Step2Curriculum: React.FC<Props> = ({ data, setData }) => {
   // Lọc ra các kỹ năng đã được chọn ở Step 1
   const selectedSkills = allSkills.filter((s) => data.skillIds.includes(s.id));
 
-    // --- TÍNH TOÁN THỜI LƯỢNG ---
-  if(data.sogiohoc == 0) {
-    return (
-      <Alert severity="error">Tổng số giờ học phải lớn hơn 0</Alert>
-    )
+  // --- TÍNH TOÁN THỜI LƯỢNG ---
+  if (data.sogiohoc == 0) {
+    return <Alert severity="error">Tổng số giờ học phải lớn hơn 0</Alert>;
   }
-  const totalCreatedHours = data.modules.reduce(
-    (sum, mod) => sum + (mod.duration || 0),
-    0
-  );
-  const targetHours = data.sogiohoc || 0;
-  const remainingHours = targetHours - totalCreatedHours;
-  const isDurationValid = totalCreatedHours == targetHours;
-  const isOverDuration = totalCreatedHours > targetHours;
 
   return (
     <Grid container spacing={4}>
@@ -258,6 +284,7 @@ const Step2Curriculum: React.FC<Props> = ({ data, setData }) => {
           ))}
         </List>
       </Grid>
+
       <Grid size={{ xs: 12 }}>
         <Divider orientation="horizontal" />
       </Grid>
@@ -268,197 +295,295 @@ const Step2Curriculum: React.FC<Props> = ({ data, setData }) => {
           Chương trình học (Modules)
         </Typography>
 
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            mb: 3,
-            bgcolor: "#e3f2fd",
-            border: "1px dashed #1976d2",
-            borderRadius: 2,
-          }}
-        >
-          <Typography variant="subtitle2" gutterBottom>
-            Kiểm soát thời lượng khóa học
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-            <Box sx={{ width: "100%", mr: 1 }}>
-              <LinearProgress
-                variant="determinate"
-                value={Math.min((totalCreatedHours / targetHours) * 100, 100)}
-                color={
-                  isOverDuration
-                    ? "error"
-                    : isDurationValid
-                    ? "success"
-                    : "primary"
-                }
-                sx={{ height: 8, borderRadius: 4 }}
-              />
-            </Box>
-            <Box sx={{ minWidth: 35 }}>
-              <Typography variant="body2" color="text.secondary">
-                {totalCreatedHours != 0 ? `${Math.round((totalCreatedHours / targetHours) * 100)}%` : "0%"}
-              </Typography>
-            </Box>
-          </Box>
-
-          <Alert
-            severity={
-              isDurationValid ? "success" : isOverDuration ? "error" : "warning"
-            }
-            icon={
-              <FontAwesomeIcon
-                icon={isDurationValid ? faCheckCircle : faExclamationCircle}
-              />
-            }
-            sx={{ alignItems: "center" }}
-          >
-            <Typography variant="body2" fontWeight="bold">
-              Đã tạo: {totalCreatedHours}h / Tổng: {targetHours}h
-            </Typography>
-            {!isDurationValid && (
-              <Typography variant="caption" display="block">
-                {isOverDuration
-                  ? `Bạn đang vượt quá ${
-                      totalCreatedHours - targetHours
-                    } giờ so với quy định.`
-                  : `Bạn cần thêm ${remainingHours} giờ nữa để hoàn thành chương trình.`}
-              </Typography>
-            )}
-          </Alert>
-        </Paper>
-
         {selectedSkills.length === 0 ? (
           <Typography color="error">
             Vui lòng chọn Kỹ năng ở Bước 1 để thêm Module.
           </Typography>
         ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {selectedSkills.map((skill) => {
-              const skillModules = data.modules
-                .map((m, idx) => ({ ...m, originalIndex: idx }))
-                .filter((m) => m.skillId === skill.id);
+          (() => {
+            //Tính toán lại tổng giờ đã phân bổ cho các skill
+            const totalAllocatedHours = (data.skillHours || []).reduce(
+              (sum, item) => sum + (item.hours || 0),
+              0
+            );
 
-              const currentInput = moduleInputs[skill.id] || {
-                tenmodule: "",
-                duration: "",
-              };
+            //Kiểm tra xem có khớp với tổng giờ khóa học (data.sogiohoc) không
+            const isStep1Valid =
+              data.sogiohoc > 0 &&
+              totalAllocatedHours == data.sogiohoc &&
+              data.skillIds.length > 0;
 
+            // --- TRƯỜNG HỢP 1: CHƯA HỢP LỆ -> HIỆN ALERT CẢNH BÁO ---
+            if (!isStep1Valid) {
               return (
-                <Paper
-                  key={skill.id}
-                  elevation={2}
-                  sx={{ p: 2, borderRadius: 2, borderTop: "4px solid #1976d2" }}
+                <Alert
+                  severity="error"
+                  variant="outlined"
+                  sx={{ mt: 1, border: "1px solid #d32f2f" }}
                 >
                   <Typography
-                    variant="subtitle1"
-                    gutterBottom
-                    sx={{
-                      fontWeight: "bold",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                    }}
+                    variant="subtitle2"
+                    sx={{ fontWeight: "bold", mb: 1 }}
                   >
-                    <Chip label={skill.skillName} color="primary" />
+                    Vui lòng hoàn tất phân bổ thời lượng ở Bước 1 trước khi nhập
+                    Module.
                   </Typography>
 
-                  {/* List Modules của Skill này */}
-                  <List>
-                    {skillModules.map((mod) => (
-                      <ListItem
-                        key={mod.originalIndex}
-                        sx={{
-                          bgcolor: "background.paper",
-                          mb: 1,
-                          border: "1px solid #eee",
-                          borderRadius: 1,
-                        }}
-                        secondaryAction={
-                          <>
-                            <IconButton
-                              size="small"
-                              onClick={() =>
-                                handleOpenEditDialog(mod, mod.originalIndex)
-                              }
-                            >
-                              <FontAwesomeIcon icon={faPen} size="xs" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() =>
-                                handleRemoveModule(mod.originalIndex)
-                              }
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </>
-                        }
+                  <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                    <li>
+                      Tổng giờ khóa học yêu cầu: <b>{data.sogiohoc}h</b>
+                    </li>
+                    <li>
+                      Tổng giờ các kỹ năng hiện tại:{" "}
+                      <b>{totalAllocatedHours}h</b>
+                    </li>
+                    {data.skillIds.length === 0 && (
+                      <li>Chưa chọn kỹ năng nào.</li>
+                    )}
+
+                    {totalAllocatedHours !== data.sogiohoc && (
+                      <li style={{ color: "#d32f2f", fontWeight: "bold" }}>
+                        {totalAllocatedHours < data.sogiohoc
+                          ? `Còn thiếu: ${data.sogiohoc - totalAllocatedHours}h`
+                          : `Đang dư: ${totalAllocatedHours - data.sogiohoc}h`}
+                      </li>
+                    )}
+                  </Box>
+                </Alert>
+              );
+            }
+
+            // --- TRƯỜNG HỢP 2: HỢP LỆ -> HIỆN UI NHẬP MODULE ---
+            return (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                {selectedSkills.map((skill) => {
+                  const skillModules = data.modules
+                    .map((m, idx) => ({ ...m, originalIndex: idx }))
+                    .filter((m) => m.skillId === skill.id);
+
+                  const currentInput = moduleInputs[skill.id] || {
+                    tenmodule: "",
+                    duration: "",
+                  };
+
+                  const expected = skillHoursMap.get(skill.id) || 0;
+                  const used = skillModules.reduce(
+                    (s, m) => s + (m.duration || 0),
+                    0
+                  );
+                  const remain = parseFloat((expected - used).toFixed(2));
+                  const isFull = expected > 0 && remain <= 0;
+
+                  const handleEnterKey = (e: React.KeyboardEvent) => {
+                    if (e.key === "Enter" && !isFull) {
+                      e.preventDefault();
+                      handleAddModule(skill.id);
+                    }
+                  };
+
+                  return (
+                    <Paper
+                      key={skill.id}
+                      elevation={2}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        borderTop: "4px solid #1976d2",
+                      }}
+                    >
+                      {/* Header & Progress bar */}
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{ gap: 2 }}
                       >
-                        <ListItemText
-                          primary={mod.tenmodule}
-                          secondary={
-                            <span
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "5px",
-                                fontSize: "0.8rem",
-                              }}
-                            >
-                              <FontAwesomeIcon icon={faClock} /> {mod.duration}{" "}
-                              giờ
-                            </span>
+                        <Typography
+                          variant="subtitle1"
+                          gutterBottom
+                          sx={{
+                            fontWeight: "bold",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                          }}
+                        >
+                          <Chip label={skill.skillName} color="primary" />
+                        </Typography>
+
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: "bold", mb: 1 }}
+                        >
+                          Thời lượng kỹ năng: {expected} giờ
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ mb: 2, mt: 2 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={
+                            expected
+                              ? Math.min((used / expected) * 100, 100)
+                              : 0
+                          }
+                          sx={{ height: 10, borderRadius: 5, mb: 1 }}
+                          color={
+                            used === expected
+                              ? "success"
+                              : used > expected
+                              ? "error"
+                              : "primary"
                           }
                         />
-                      </ListItem>
-                    ))}
-                  </List>
+                        <Typography variant="caption" color="text.secondary">
+                          Đã dùng {used}/{expected} giờ{" "}
+                          {expected ? `• còn ${remain} giờ` : ""}
+                        </Typography>
+                      </Box>
 
-                  {/* Form thêm Module cho Skill này */}
-                  <Box
-                    sx={{
-                      mt: 2,
-                      display: "flex",
-                      gap: 1,
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <TextField
-                      label="Tên Module mới"
-                      size="small"
-                      value={currentInput.tenmodule}
-                      onChange={(e) =>
-                        handleInputChange(skill.id, "tenmodule", e.target.value)
-                      }
-                      fullWidth
-                    />
-                    <TextField
-                      label="Giờ"
-                      size="small"
-                      type="number"
-                      value={currentInput.duration}
-                      onChange={(e) =>
-                        handleInputChange(skill.id, "duration", e.target.value)
-                      }
-                      sx={{ width: "100px" }}
-                      InputProps={{ inputProps: { min: 0.1, step: 0.1 } }}
-                    />
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={() => handleAddModule(skill.id)}
-                      sx={{ height: "40px" }}
-                    >
-                      Thêm
-                    </Button>
-                  </Box>
-                </Paper>
-              );
-            })}
-          </Box>
+                      {/* Các Alert trạng thái nhỏ bên trong */}
+                      {expected === 0 && (
+                        <Alert severity="info" sx={{ mb: 1 }}>
+                          Kỹ năng này chưa được khai báo số giờ.
+                        </Alert>
+                      )}
+                      {expected > 0 && used < expected && (
+                        <Alert severity="warning" sx={{ mb: 1 }}>
+                          Tiến độ: <b>{used}h</b> / <b>{expected}h</b>
+                        </Alert>
+                      )}
+                      {used > expected && (
+                        <Alert severity="error" sx={{ mb: 1 }}>
+                          Đã dùng <b>{used}h</b> — vượt quá{" "}
+                          <b>{parseFloat((used - expected).toFixed(2))}h</b>
+                        </Alert>
+                      )}
+                      {expected > 0 && used === expected && (
+                        <Alert severity="success" sx={{ mb: 1 }}>
+                          Đã đủ giờ.
+                        </Alert>
+                      )}
+
+                      {/* Danh sách Module đã thêm */}
+                      <List>
+                        {skillModules.map((mod) => (
+                          <ListItem
+                            key={mod.originalIndex}
+                            sx={{
+                              bgcolor: "background.paper",
+                              mb: 1,
+                              border: "1px solid #eee",
+                              borderRadius: 1,
+                            }}
+                            secondaryAction={
+                              <>
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    handleOpenEditDialog(
+                                      mod as any,
+                                      mod.originalIndex
+                                    )
+                                  }
+                                >
+                                  <FontAwesomeIcon icon={faPen} size="xs" />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() =>
+                                    handleRemoveModule(mod.originalIndex)
+                                  }
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </>
+                            }
+                          >
+                            <ListItemText
+                              primary={mod.tenmodule}
+                              secondary={
+                                <span
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    fontSize: "0.8rem",
+                                  }}
+                                >
+                                  <FontAwesomeIcon icon={faClock} />{" "}
+                                  {mod.duration} giờ
+                                </span>
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+
+                      {/* Form thêm Module */}
+                      <Box
+                        sx={{
+                          mt: 2,
+                          display: "flex",
+                          gap: 1,
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <TextField
+                          label={
+                            isFull ? "Đã đủ số giờ quy định" : "Tên Module mới"
+                          }
+                          size="small"
+                          value={currentInput.tenmodule}
+                          onChange={(e) =>
+                            handleInputChange(
+                              skill.id,
+                              "tenmodule",
+                              e.target.value
+                            )
+                          }
+                          fullWidth
+                          onKeyDown={handleEnterKey}
+                          disabled={isFull || expected === 0}
+                          // Ref focus (nếu bạn đã thêm phần ref ở câu trước)
+                          inputRef={(el) =>
+                            (nameInputRefs.current[skill.id] = el)
+                          }
+                        />
+                        <TextField
+                          label="Giờ"
+                          size="small"
+                          type="number"
+                          value={currentInput.duration}
+                          onChange={(e) =>
+                            handleInputChange(
+                              skill.id,
+                              "duration",
+                              e.target.value
+                            )
+                          }
+                          sx={{ width: "100px" }}
+                          InputProps={{ inputProps: { min: 0.1, step: 0.1 } }}
+                          onKeyDown={handleEnterKey}
+                          disabled={isFull || expected === 0}
+                        />
+                        <Button
+                          variant="contained"
+                          color={isFull ? "success" : "secondary"}
+                          onClick={() => handleAddModule(skill.id)}
+                          sx={{ height: "40px", whiteSpace: "nowrap" }}
+                          disabled={isFull || expected === 0}
+                        >
+                          {isFull ? "Đã đủ" : "Thêm"}
+                        </Button>
+                      </Box>
+                    </Paper>
+                  );
+                })}
+              </Box>
+            );
+          })()
         )}
       </Grid>
 
