@@ -34,7 +34,7 @@ import {
   ScheduleAlternative,
   ResourceOption,
   ScheduleCheckRequest,
-} from "../model/schedule_suggestion_model";
+} from "../model/schedule_model";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faClock } from "@fortawesome/free-solid-svg-icons";
 import {

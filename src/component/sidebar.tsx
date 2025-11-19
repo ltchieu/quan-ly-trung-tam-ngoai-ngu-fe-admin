@@ -1,4 +1,3 @@
-// src/components/Sidebar.tsx
 import React from "react";
 import {
   Box,
@@ -12,7 +11,6 @@ import {
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import AccountBoxIcon from "@mui/icons-material/AccountBox";
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import logo from "../img/logo.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -24,7 +22,7 @@ const navItems = [
   { text: "Overview", icon: <DashboardIcon />, path: "/" },
   { text: "Khóa học", icon: <FontAwesomeIcon icon={faBook} />, path: "/courses" },
   { text: "Lớp học", icon: <FontAwesomeIcon icon={faUsers} />, path: "/class" },
-  { text: "Ca học", icon: <FontAwesomeIcon icon={faCalendar} />, path: "/timetable" },
+  { text: "Ca học", icon: <FontAwesomeIcon icon={faCalendar} />, path: "/schedule" },
 ];
 
 export const Sidebar: React.FC = () => {

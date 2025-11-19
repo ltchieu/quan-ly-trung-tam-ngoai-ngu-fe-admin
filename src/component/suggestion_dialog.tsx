@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { ScheduleSuggestionResponse, ScheduleAlternative } from '../model/schedule_suggestion_model';
+import { ScheduleSuggestionResponse, ScheduleAlternative } from '../model/schedule_model';
 
 interface Props {
   open: boolean;

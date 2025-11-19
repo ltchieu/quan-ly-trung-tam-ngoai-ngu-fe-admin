@@ -8,7 +8,7 @@ import ClassListPage from "../pages/class";
 import Login from "../auth/login";
 import { useAuth } from "../hook/useAuth";
 import ProtectedRoute from "./protected_route";
-import Timetable from "../pages/timetable";
+import Timetable from "../pages/schedule";
 
 function AppRoutes() {
   const { accessToken, isLoading } = useAuth();
@@ -26,7 +26,7 @@ function AppRoutes() {
               <Route path="/addCourse" element={<CreateCoursePage />}></Route>
               <Route path="/editCourse/:id" element={<EditCourse />}></Route>
               <Route path="/class" element={<ClassListPage />}></Route>
-               <Route path="/timetable" element={<Timetable />}></Route>
+               <Route path="/schedule" element={<Timetable />}></Route>
             </Route>
           </Route>
         ) : (
