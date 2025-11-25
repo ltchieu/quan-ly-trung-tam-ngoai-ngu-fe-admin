@@ -240,7 +240,6 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   const {
     values,
     setFieldValue,
-    handleChange,
     errors,
     touched,
     setFieldTouched,

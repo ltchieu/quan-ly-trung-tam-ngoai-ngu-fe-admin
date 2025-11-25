@@ -43,6 +43,7 @@ import {
   getCourseFilterList,
   getLecturerFilterList,
   getRoomFilterList,
+  updateClass,
 } from "../services/class_service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -62,6 +63,8 @@ import {
   visuallyHidden,
 } from "../util/class_util";
 import useDebounce from "../hook/useDebounce";
+import { ScheduleAlternative } from "../model/schedule_model";
+import ConfirmUpdateDialog from "../component/confirm_update_dialog";
 
 interface FilterState {
   lecturer: number | null;
@@ -140,6 +143,11 @@ const ClassListPage: React.FC = () => {
   const [openSuggestionDialog, setOpenSuggestionDialog] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [confirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
+  const [selectedAlt, setSelectedAlt] = useState<ScheduleAlternative | null>(
+    null
+  );
+  const [targetClassId, setTargetClassId] = useState<number | null>(null);
 
   // State sắp xếp
   const [order, setOrder] = useState<Order>("asc");
@@ -247,6 +255,7 @@ const ClassListPage: React.FC = () => {
   };
 
   const handleChangeClassStatus = async (classId: number) => {
+    setTargetClassId(classId);
     try {
       const res = await changeClassStatus(classId);
 
@@ -263,9 +272,44 @@ const ClassListPage: React.FC = () => {
     }
   };
 
-  const handleSelectAlternative = (alternative: any) => {
-    console.log("Người dùng chọn phương án:", alternative);
+  const handleSelectAlternative = (alternative: ScheduleAlternative) => {
     setOpenSuggestionDialog(false);
+    setSelectedAlt(alternative);
+    setConfirmUpdateOpen(true);
+  };
+
+  const handleConfirmUpdate = async () => {
+    // if (!targetClassId || !selectedAlt) return;
+
+    // try {
+    //   const currentClass = lopHocList.find((c) => c.classId === targetClassId);
+
+    //   if (!currentClass) return;
+    //   const durationMinutes = 90;
+
+    //   const updateData = {
+    //     className: currentClass.className,
+    //     startDate: selectedAlt.startDate,
+    //     startTime: selectedAlt.startTime,
+    //     schedule: selectedAlt.schedulePattern,
+    //     minutesPerSession: durationMinutes,
+
+    //     roomId: selectedAlt.availableRooms[0]?.id,
+    //     lecturerId: selectedAlt.availableLecturers[0]?.id,
+
+    //     status: true,
+    //   };
+
+    //   await updateClass(targetClassId, updateData);
+
+    //   setSuccessMsg("Cập nhật lịch học & Mở lớp thành công!");
+    //   setOpenSnackbar(true);
+    //   setConfirmUpdateOpen(false);
+    //   fetchData();
+    // } catch (error) {
+    //   console.error("Update failed:", error);
+    //   alert("Cập nhật thất bại. Vui lòng thử lại.");
+    // }
   };
 
   // --- Hàm xử lý khi bấm nút Lọc ---
@@ -297,7 +341,7 @@ const ClassListPage: React.FC = () => {
     setSelectedRoom("");
     setSelectedCourse("");
     setSearchTerm("");
-    dispatch({ type: 'RESET' });
+    dispatch({ type: "RESET" });
     setPage(0);
   };
 
@@ -329,7 +373,7 @@ const ClassListPage: React.FC = () => {
     };
 
   return (
-    <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Grid container sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, md: 9 }} textAlign="left" sx={{ pl: 2 }}>
           <Typography variant="h3" fontWeight="bold">
@@ -351,126 +395,113 @@ const ClassListPage: React.FC = () => {
 
       <Paper sx={{ p: 2, borderRadius: 4 }}>
         {/* Toolbar: Tìm kiếm và Lọc */}
-        <Box
-          sx={{
-            display: "flex",
-            mb: 2,
-            gap: 4,
-            flexWrap: "wrap",
-            flexDirection: "column",
-          }}
-        >
-          <TextField
-            variant="outlined"
-            placeholder="Tìm kiếm Giảng viên, Lịch, Phòng..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            sx={{ width: "100%", maxWidth: 400 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <FontAwesomeIcon icon={faMagnifyingGlass} />
-                </InputAdornment>
-              ),
-            }}
-          />
+        <Box sx={{ mb: 3 }}>
+          <Grid container spacing={2} alignItems="center">
+            {/* Search Bar */}
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField
+                fullWidth
+                size="small"
+                variant="outlined"
+                placeholder="Tìm kiếm..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <FontAwesomeIcon icon={faMagnifyingGlass} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
 
-          <Box sx={{ display: "flex", justifyContent: "flex-start", gap: 3 }}>
-            <FormControl sx={{ minWidth: 350 }} variant="outlined">
-              <InputLabel>Lọc theo giảng viên</InputLabel>
-
-              <Select
-                name="giangVien"
-                value={selectedLecturer}
-                onChange={handleFilterChange}
-                label="Lọc theo giảng viên"
-              >
-                <MenuItem value="">
-                  <em>Tất cả giảng viên</em>
-                </MenuItem>
-
-                {giangVienList.map((gv) => (
-                  <MenuItem key={gv.lecturerId} value={gv.lecturerId}>
-                    {gv.lecturerName}
+            {/* Filters - Dùng Grid để tự co giãn */}
+            <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Giảng viên</InputLabel>
+                <Select
+                  name="giangVien"
+                  value={selectedLecturer}
+                  onChange={handleFilterChange}
+                  label="Giảng viên"
+                >
+                  <MenuItem value="">
+                    <em>Tất cả</em>
                   </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                  {giangVienList.map((gv) => (
+                    <MenuItem key={gv.lecturerId} value={gv.lecturerId}>
+                      {gv.lecturerName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-            <FormControl sx={{ minWidth: 350 }} variant="outlined">
-              <InputLabel>Lọc theo phòng học</InputLabel>
-
-              <Select
-                name="phongHoc"
-                value={selectedRoom}
-                onChange={handleFilterChange}
-                label="Lọc theo phòng học"
-              >
-                <MenuItem value="">
-                  <em>Tất cả phòng học</em>
-                </MenuItem>
-
-                {phongHocList.map((p) => (
-                  <MenuItem key={p.roomId} value={p.roomId}>
-                    {p.roomName}
+            <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Phòng học</InputLabel>
+                <Select
+                  name="phongHoc"
+                  value={selectedRoom}
+                  onChange={handleFilterChange}
+                  label="Phòng học"
+                >
+                  <MenuItem value="">
+                    <em>Tất cả</em>
                   </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                  {phongHocList.map((p) => (
+                    <MenuItem key={p.roomId} value={p.roomId}>
+                      {p.roomName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-            <FormControl sx={{ minWidth: 350 }} variant="outlined">
-              <InputLabel>Lọc theo khóa học</InputLabel>
-
-              <Select
-                name="khoaHoc"
-                value={selectedCourse}
-                onChange={handleFilterChange}
-                label="Lọc theo khóa học"
-              >
-                <MenuItem value="">
-                  <em>Tất cả khóa học</em>
-                </MenuItem>
-
-                {khoaHocList.map((khoaHoc) => (
-                  <MenuItem key={khoaHoc.courseId} value={khoaHoc.courseId}>
-                    {khoaHoc.courseName}
+            <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Khóa học</InputLabel>
+                <Select
+                  name="khoaHoc"
+                  value={selectedCourse}
+                  onChange={handleFilterChange}
+                  label="Khóa học"
+                >
+                  <MenuItem value="">
+                    <em>Tất cả</em>
                   </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                  {khoaHocList.map((khoaHoc) => (
+                    <MenuItem key={khoaHoc.courseId} value={khoaHoc.courseId}>
+                      {khoaHoc.courseName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-            <Box
-              sx={{ display: "flex", gap: 2, justifyContent: "space-between" }}
-            >
+            {/* Action Buttons */}
+            <Grid size={{ xs: 12, sm: 6, md: 1.5 }} display="flex" gap={1}>
               <Button
                 variant="contained"
                 color="primary"
-                startIcon={<FontAwesomeIcon icon={faFilter} size="1x" />}
                 onClick={handleFilterSubmit}
                 fullWidth
-                sx={{
-                  py: 1,
-                  px: 3,
-                }}
+                sx={{ minWidth: "auto" }}
               >
                 Lọc
               </Button>
-
               <Button
                 variant="outlined"
                 color="error"
                 onClick={handleClearFilter}
                 fullWidth
-                sx={{
-                  minWidth: "120px",
-                  py: 1,
-                  px: 3,
-                }}
+                sx={{ minWidth: "auto" }}
               >
-                Xóa lọc
+                Xóa
               </Button>
-            </Box>
-          </Box>
+            </Grid>
+          </Grid>
         </Box>
 
         {/* Bảng dữ liệu */}
@@ -549,7 +580,9 @@ const ClassListPage: React.FC = () => {
                           <IconButton
                             size="small"
                             color="primary"
-                            onClick={() => {navigate(`/class/edit/${lop.classId}`)}}
+                            onClick={() => {
+                              navigate(`/class/edit/${lop.classId}`);
+                            }}
                           >
                             <FontAwesomeIcon icon={faEdit} />
                           </IconButton>
@@ -612,6 +645,14 @@ const ClassListPage: React.FC = () => {
         data={suggestionData}
         onSelectAlternative={handleSelectAlternative}
       />
+
+      <ConfirmUpdateDialog 
+          open={confirmUpdateOpen}
+          onClose={() => setConfirmUpdateOpen(false)}
+          onConfirm={handleConfirmUpdate}
+          originalClassId={targetClassId}
+          selectedAlternative={selectedAlt}
+       />
 
       {/* --- SNACKBAR HIỂN THỊ THÀNH CÔNG --- */}
       <Snackbar
