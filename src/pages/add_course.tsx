@@ -1,4 +1,3 @@
-// src/pages/admin/course/CreateCoursePage.tsx
 import React, { useMemo, useState } from "react";
 import {
   Box,
@@ -14,6 +13,8 @@ import {
   Divider,
   Grid,
   Stack,
+  Breadcrumbs,
+  Link,
 } from "@mui/material";
 
 import Step1CourseInfo from "../component/add_course_infor";
@@ -125,6 +126,17 @@ const CreateCoursePage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {/* Breadcrumbs */}
+      <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
+        <Link underline="hover" color="inherit" href="/">
+          Dashboard
+        </Link>
+        <Link underline="hover" color="inherit" href="/courses">
+          Khóa học
+        </Link>
+        <Typography color="text.primary">Thêm khóa học</Typography>
+      </Breadcrumbs>
+
       <Grid container spacing={3}>
         {/* === CỘT BÊN TRÁI (NỘI DUNG CHÍNH) === */}
         <Grid size={{ xs: 12, md: 8 }}>

@@ -1,12 +1,11 @@
-// src/pages/DashboardPage.tsx
 import React from "react";
 import {
-  Box,
   Card,
   CardContent,
   Container,
   Grid,
   Typography,
+  Breadcrumbs,
 } from "@mui/material";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import PeopleIcon from "@mui/icons-material/People";
@@ -17,8 +16,11 @@ import { TrafficSourceChart } from "../component/traffic_source";
 
 const DashboardPage: React.FC = () => {
   return (
-    <Container maxWidth={false}>
-      <Typography variant="h4" sx={{ mb: 4 }}>
+    <Container maxWidth={false} sx={{ py: 4 }}>
+       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+          <Typography color="text.primary">Dashboard</Typography>
+        </Breadcrumbs>
+      <Typography variant="h4" sx={{ mb: 4, fontWeight: "bold" }}>
         Overview
       </Typography>
       <Grid container spacing={3}>

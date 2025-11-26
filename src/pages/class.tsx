@@ -27,6 +27,8 @@ import {
   Snackbar,
   TableSortLabel,
   Grid,
+  Breadcrumbs,
+  Link,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
@@ -374,6 +376,14 @@ const ClassListPage: React.FC = () => {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      {/* Breadcrumbs */}
+      <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
+        <Link underline="hover" color="inherit" href="/">
+          Dashboard
+        </Link>
+        <Typography color="text.primary">Lớp học</Typography>
+      </Breadcrumbs>
+
       <Grid container sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, md: 9 }} textAlign="left" sx={{ pl: 2 }}>
           <Typography variant="h3" fontWeight="bold">

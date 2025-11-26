@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Thêm useCallback
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Container, Typography, Tabs, Tab, Button, Paper, CircularProgress, Alert } from '@mui/material';
+import { Box, Container, Typography, Tabs, Tab, Button, Paper, CircularProgress, Snackbar,
+  Alert,
+  Breadcrumbs,
+  Link, } from '@mui/material';
 import { ModuleData } from '../model/module_model';
 import { getCourseDetail, getModulesByCourseId } from '../services/course_service';
 import EditCurriculum from '../component/edit_curriculum';
@@ -97,53 +100,66 @@ const EditCourse: React.FC = () => {
     }
 
     return (
-        <Container component={Paper} sx={{ p: 4, mt: 4, borderRadius: 4, mb: 4 }}>
-            <Typography variant="h4" gutterBottom>
-                Chỉnh sửa Khóa học: {courseBaseData.tenkhoahoc}
-            </Typography>
+        <Container maxWidth="lg">
+            {/* Breadcrumbs */}
+            <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3, mt: 4 }}>
+                <Link underline="hover" color="inherit" href="/">
+                    Dashboard
+                </Link>
+                <Link underline="hover" color="inherit" href="/courses">
+                    Khóa học
+                </Link>
+                <Typography color="text.primary">Chỉnh sửa</Typography>
+            </Breadcrumbs>
 
-            {/* Tabs */}
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                <Tabs value={activeTab} onChange={handleTabChange} aria-label="Course edit tabs">
-                    <Tab label="Thông tin chung" id="edit-tab-0" aria-controls="edit-panel-0" />
-                    <Tab label="Mục tiêu & Chương trình" id="edit-tab-1" aria-controls="edit-panel-1" />
-                    <Tab label="Nội dung chi tiết" id="edit-tab-2" aria-controls="edit-panel-2" />
-                </Tabs>
-            </Box>
+            <Paper sx={{ p: 4, borderRadius: 4, mb: 4 }}>
+                <Typography variant="h4" gutterBottom>
+                    Chỉnh sửa Khóa học: {courseBaseData.tenkhoahoc}
+                </Typography>
 
-            {/* Tab Panels */}
-            <div role="tabpanel" hidden={activeTab !== 0} id="edit-panel-0" aria-labelledby="edit-tab-0">
-                 {activeTab === 0 &&
-                    <EditCourseInfo
-                        courseId={Number(id)}
-                        initialData={courseBaseData as CourseDetails}
-                        onSaveSuccess={handleDataNeedsRefresh}
-                    />
-                 }
-            </div>
-            <div role="tabpanel" hidden={activeTab !== 1} id="edit-panel-1">
-                 {activeTab === 1 &&
-                    <EditCurriculum
-                        courseId={Number(id)}
-                        initialModules={modules} 
-                        objectives={courseBaseData.muctieu || []}
-                        onModulesChange={handleDataNeedsRefresh}
-                        // setDataObjectives={(newObjectives) => setCourseBaseData(prev => ({...prev, muctieu: newObjectives}))}
-                    />
-                 }
-            </div>
-             <div role="tabpanel" hidden={activeTab !== 2} id="edit-panel-2">
-                 {activeTab === 2 &&
-                    <EditContentDetails
-                         modules={modules} 
-                         onModulesChange={handleDataNeedsRefresh}
-                    />
-                 }
-            </div>
+                {/* Tabs */}
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                    <Tabs value={activeTab} onChange={handleTabChange} aria-label="Course edit tabs">
+                        <Tab label="Thông tin chung" id="edit-tab-0" aria-controls="edit-panel-0" />
+                        <Tab label="Mục tiêu & Chương trình" id="edit-tab-1" aria-controls="edit-panel-1" />
+                        <Tab label="Nội dung chi tiết" id="edit-tab-2" aria-controls="edit-panel-2" />
+                    </Tabs>
+                </Box>
 
-             <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 4 }}>
-                <Button onClick={() => navigate('/courses')}>Quay lại danh sách</Button>
-            </Box>
+                {/* Tab Panels */}
+                <div role="tabpanel" hidden={activeTab !== 0} id="edit-panel-0" aria-labelledby="edit-tab-0">
+                    {activeTab === 0 &&
+                        <EditCourseInfo
+                            courseId={Number(id)}
+                            initialData={courseBaseData as CourseDetails}
+                            onSaveSuccess={handleDataNeedsRefresh}
+                        />
+                    }
+                </div>
+                <div role="tabpanel" hidden={activeTab !== 1} id="edit-panel-1">
+                    {activeTab === 1 &&
+                        <EditCurriculum
+                            courseId={Number(id)}
+                            initialModules={modules} 
+                            objectives={courseBaseData.muctieu || []}
+                            onModulesChange={handleDataNeedsRefresh}
+                            // setDataObjectives={(newObjectives) => setCourseBaseData(prev => ({...prev, muctieu: newObjectives}))}
+                        />
+                    }
+                </div>
+                <div role="tabpanel" hidden={activeTab !== 2} id="edit-panel-2">
+                    {activeTab === 2 &&
+                        <EditContentDetails
+                            modules={modules} 
+                            onModulesChange={handleDataNeedsRefresh}
+                        />
+                    }
+                </div>
+
+                <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 4 }}>
+                    <Button onClick={() => navigate('/courses')}>Quay lại danh sách</Button>
+                </Box>
+            </Paper>
         </Container>
     );
 };

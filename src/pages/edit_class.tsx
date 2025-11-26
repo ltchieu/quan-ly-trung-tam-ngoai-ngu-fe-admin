@@ -14,7 +14,6 @@ import {
   FormControl,
   FormLabel,
   Alert,
-  AlertTitle,
   Chip,
   Stack,
   Card,
@@ -27,6 +26,8 @@ import {
   TableHead,
   TableRow,
   Divider,
+  Breadcrumbs,
+  Link,
 } from "@mui/material";
 // Sử dụng Grid v2
 import { Grid } from "@mui/material";
@@ -408,6 +409,17 @@ const EditClass: React.FC = () => {
           px: 2,
         }}
       >
+        {/* Breadcrumbs */}
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
+          <Link underline="hover" color="inherit" href="/">
+            Dashboard
+          </Link>
+          <Link underline="hover" color="inherit" href="/classes">
+            Lớp học
+          </Link>
+          <Typography color="text.primary">Chỉnh sửa</Typography>
+        </Breadcrumbs>
+
         <Stack
           direction="row"
           justifyContent="space-between"
@@ -680,7 +692,7 @@ const EditClass: React.FC = () => {
                       color="warning.main"
                       fontWeight="bold"
                     >
-                      ⚠️ Phát hiện xung đột
+                      Phát hiện xung đột
                     </Typography>
                   </Stack>
                   <Alert severity="warning" sx={{ mb: 2 }}>
@@ -861,7 +873,7 @@ const EditClass: React.FC = () => {
                       color="success.main"
                       fontWeight="bold"
                     >
-                      ✅ Lịch hợp lệ
+                      Lịch hợp lệ
                     </Typography>
                   </Stack>
                   <Alert

@@ -20,6 +20,8 @@ import {
   Card,
   CardContent,
   Stack,
+  Breadcrumbs,
+  Link,
 } from "@mui/material";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -170,6 +172,14 @@ const Timetable: React.FC = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="vi">
       <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
+        {/* Breadcrumbs */}
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
+          <Link underline="hover" color="inherit" href="/">
+            Dashboard
+          </Link>
+          <Typography color="text.primary">Lịch học</Typography>
+        </Breadcrumbs>
+
         <Paper sx={{ p: 2, borderRadius: 2 }}>
           {/* HEADER */}
           <Grid container spacing={2} alignItems="center" sx={{ mb: 3 }}>

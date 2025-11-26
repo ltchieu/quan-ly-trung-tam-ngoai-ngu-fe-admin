@@ -23,6 +23,8 @@ import {
   SelectChangeEvent,
   Snackbar,
   Alert,
+  Breadcrumbs,
+  Link,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -182,6 +184,14 @@ const Course: React.FC = () => {
       sx={{ flexGrow: 1, width: "90%", py: 6, margin: "auto" }}
     >
       <Container maxWidth={false}>
+        {/* Breadcrumbs */}
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
+          <Link underline="hover" color="inherit" href="/">
+            Dashboard
+          </Link>
+          <Typography color="text.primary">Khóa học</Typography>
+        </Breadcrumbs>
+
         {/* Header */}
         <Stack
           direction="row"
