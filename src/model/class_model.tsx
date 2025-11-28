@@ -105,3 +105,14 @@ export interface AttendanceSessionResponse {
   sessionId: number;
   entries: AttendanceEntryResponse[];
 }
+
+export interface AttendanceEntryRequest {
+  studentId: number;
+  absent: boolean;
+  note: string;
+}
+
+export interface AttendanceSessionRequest {
+  sessionId: number;
+  entries: AttendanceEntryRequest[];
+}

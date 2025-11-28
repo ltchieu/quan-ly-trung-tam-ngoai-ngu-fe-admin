@@ -8,6 +8,7 @@ import {
   LecturerFilterData,
   RoomFilterData,
   AttendanceSessionResponse,
+  AttendanceSessionRequest,
 } from "../model/class_model";
 
 export function getAllClasses(page: number, size: number) {
@@ -167,7 +168,9 @@ export const getClassesEnrolled = async (page: number, size: number) => {
 
 export const getAttendanceBySessionId = async (sessionId: number | string) => {
   try {
-    const response = await axiosClient.get<ApiResponse<AttendanceSessionResponse>>(`/courseclasses/sessions/${sessionId}/attendance`);
+    const response = await axiosClient.get<ApiResponse<AttendanceSessionResponse>>(`/courseclasses/sessions/${sessionId}/attendance`, {
+      withCredentials: true
+    });
     if (response.data && response.data.code === 1000 && response.data.data) {
       return response.data.data;
     } else {
@@ -180,12 +183,19 @@ export const getAttendanceBySessionId = async (sessionId: number | string) => {
   }
 };
 
-export const saveAttendanceMock = async (sessionId: number | string, attendanceList: any[]) => {
-  // Mock saving attendance
-  console.log(`Saving attendance for session ${sessionId}:`, attendanceList);
-  return {
-    code: 1000,
-    message: "Lưu điểm danh thành công",
-    data: attendanceList
-  };
+export const saveAttendance = async (sessionId: number | string, request: AttendanceSessionRequest) => {
+  try {
+    const response = await axiosClient.post<ApiResponse<AttendanceSessionResponse>>(`/lecturers/sessions/${sessionId}/attendance`, request, {
+      withCredentials: true
+    });
+    if (response.data && response.data.code === 1000 && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data?.message || "Lưu điểm danh thất bại");
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Lưu điểm danh API error:", message);
+    throw new Error(message);
+  }
 };
