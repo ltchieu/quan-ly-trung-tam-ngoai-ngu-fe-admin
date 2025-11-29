@@ -199,3 +199,18 @@ export const saveAttendance = async (sessionId: number | string, request: Attend
     throw new Error(message);
   }
 };
+
+export const addStudentToClass = async (classId: number | string, studentId: number | string) => {
+  try {
+    const response = await axiosClient.post(`/courseclasses/${classId}/enroll`, { studentId });
+    if (response.data && response.data.code === 1000) {
+      return response.data;
+    } else {
+      throw new Error(response.data?.message || "Thêm học viên thất bại");
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Thêm học viên API error:", message);
+    throw new Error(message);
+  }
+};

@@ -132,16 +132,10 @@ const TeacherAttendance: React.FC = () => {
                 const session = sessions.find(s => s.sessionId === selectedSessionId);
                 if (session) {
                     const today = dayjs().format("YYYY-MM-DD");
-                    // Assuming session.date is in YYYY-MM-DD format. If not, might need parsing.
-                    // Let's try to normalize both to be safe.
                     const sessionDate = dayjs(session.date).format("YYYY-MM-DD");
 
                     const isToday = sessionDate === today;
                     const isCompleted = session.status === "Completed";
-
-                    // Rule: 
-                    // 1. If Completed -> Read only
-                    // 2. If Not Completed -> Editable ONLY if it is Today
 
                     if (isCompleted) {
                         setIsEditable(false);
@@ -187,13 +181,9 @@ const TeacherAttendance: React.FC = () => {
             };
             await saveAttendance(selectedSessionId, request);
 
-            // Update local session status to Completed if it was successful
             setSessions(prev => prev.map(s => s.sessionId === selectedSessionId ? { ...s, status: 'Completed' } : s));
             setAttendanceStatus("Taken");
-            // After saving, it becomes completed, so it might become read-only depending on logic, 
-            // but usually we might want to allow editing on the same day? 
-            // The requirement says: "if the status is already studied then the attendance will not be allowed anymore"
-            // So we should disable editing immediately.
+
             setIsEditable(false);
 
             setNotification({

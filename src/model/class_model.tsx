@@ -7,6 +7,8 @@ export interface ClassView {
   startTime: string;
   endTime: string;
   status: string;
+  maxCapacity: number;
+  currentEnrollment: number;
 }
 
 export interface CourseFilterData {

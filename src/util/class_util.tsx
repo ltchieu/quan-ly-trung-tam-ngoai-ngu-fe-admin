@@ -27,7 +27,7 @@ export function getComparator<T>(
 // Hàm sắp xếp ổn định (Stable Sort)
 export function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) {
   const stabilizedThis = array.map((el, index) => [el, index] as [T, number]);
-  
+
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) {
@@ -35,15 +35,14 @@ export function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => n
     }
     return a[1] - b[1];
   });
-  
+
   return stabilizedThis.map((el) => el[0]);
 }
 
 // Định nghĩa cấu trúc cho HeadCell
 interface HeadCell {
   disableSorting?: boolean;
-  // id phải là key của ClassView HOẶC là 'actions' (cột không có trong data)
-  id: keyof ClassView | 'actions'; 
+  id: keyof ClassView | 'actions';
   label: string;
   numeric?: boolean;
 }
@@ -51,10 +50,9 @@ interface HeadCell {
 //Cấu hình cột
 export const headCells: HeadCell[] = [
   { id: 'className', label: 'Tên lớp' },
-  { id: 'roomName', label: 'Phòng học' },
-  { id: 'schedulePattern', label: 'Lịch học' },
-  { id: 'startTime', label: 'Thời gian học' },
+  { id: 'schedulePattern', label: 'Lịch học & Phòng' },
   { id: 'instructorName', label: 'Giảng viên' },
+  { id: 'currentEnrollment', label: 'Sĩ số' },
   { id: 'status', label: 'Trạng thái' },
   { id: 'actions', label: 'Hành động', disableSorting: true },
 ];

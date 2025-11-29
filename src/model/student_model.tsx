@@ -10,3 +10,12 @@ export interface StudentModel {
   hinhanh: string;
   trinhdo: string;
 }
+
+export interface StudentCreationRequest {
+  hoten: string;
+  gioitinh: boolean;
+  ngaysinh: string;
+  sdt: string;
+  email: string;
+  diachi: string;
+}

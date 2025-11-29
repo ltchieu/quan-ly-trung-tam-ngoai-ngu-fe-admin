@@ -29,6 +29,7 @@ import {
   Grid,
   Breadcrumbs,
   Link,
+  LinearProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
@@ -46,6 +47,7 @@ import {
   getLecturerFilterList,
   getRoomFilterList,
   updateClass,
+  addStudentToClass,
 } from "../../services/class_service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -55,6 +57,7 @@ import {
   faLockOpen,
   faMagnifyingGlass,
   faTrash,
+  faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import SuggestionDialog from "../../component/suggestion_dialog";
 import {
@@ -67,6 +70,7 @@ import {
 import useDebounce from "../../hook/useDebounce";
 import { ScheduleAlternative } from "../../model/schedule_model";
 import ConfirmUpdateDialog from "../../component/confirm_update_dialog";
+import AddStudentDialog from "../../component/add_student_dialog";
 
 interface FilterState {
   lecturer: number | null;
@@ -83,6 +87,7 @@ type FilterAction =
       lecturer: number | null;
       room: number | null;
       course: number | null;
+      searchTerm: string | null;
     };
   }
   | { type: "RESET" };
@@ -150,6 +155,10 @@ const ClassListPage: React.FC = () => {
     null
   );
   const [targetClassId, setTargetClassId] = useState<number | null>(null);
+
+  // State cho Add Student Dialog
+  const [addStudentDialogOpen, setAddStudentDialogOpen] = useState(false);
+  const [selectedClassIdForAddStudent, setSelectedClassIdForAddStudent] = useState<number | null>(null);
 
   // State sắp xếp
   const [order, setOrder] = useState<Order>("asc");
@@ -331,6 +340,7 @@ const ClassListPage: React.FC = () => {
           selectedCourse && selectedCourse !== "all"
             ? Number(selectedCourse)
             : null,
+        searchTerm: null,
       },
     });
     setPage(0);
@@ -368,6 +378,24 @@ const ClassListPage: React.FC = () => {
     (property: keyof ClassView) => (event: React.MouseEvent<unknown>) => {
       handleRequestSort(property);
     };
+
+  const handleOpenAddStudentDialog = (classId: number) => {
+    setSelectedClassIdForAddStudent(classId);
+    setAddStudentDialogOpen(true);
+  };
+
+  const handleAddStudent = async (studentId: number) => {
+    if (!selectedClassIdForAddStudent) return;
+    try {
+      await addStudentToClass(selectedClassIdForAddStudent, studentId);
+      setSuccessMsg("Thêm học viên thành công!");
+      setOpenSnackbar(true);
+      fetchData();
+    } catch (error: any) {
+      console.error("Failed to add student:", error);
+      alert(error.message);
+    }
+  };
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -566,13 +594,40 @@ const ClassListPage: React.FC = () => {
                 stableSort(lopHocList, getComparator(order, orderBy)).map(
                   (lop) => (
                     <TableRow hover key={lop.classId}>
-                      <TableCell>{lop.className}</TableCell>
-                      <TableCell>{lop.roomName}</TableCell>
-                      <TableCell>{lop.schedulePattern}</TableCell>
                       <TableCell>
-                        {lop.startTime} - {lop.endTime}
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          {lop.className}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            {lop.schedulePattern}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {lop.startTime} - {lop.endTime}
+                          </Typography>
+                          <Typography variant="caption" color="primary">
+                            {lop.roomName}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell>{lop.instructorName}</TableCell>
+                      <TableCell sx={{ minWidth: 150, pr: 4 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box sx={{ width: '100%', mr: 1 }}>
+                            <LinearProgress
+                              variant="determinate"
+                              value={(lop.currentEnrollment / lop.maxCapacity) * 100}
+                              color={(lop.currentEnrollment / lop.maxCapacity) >= 1 ? "error" : "primary"}
+                              sx={{ height: 8, borderRadius: 5 }}
+                            />
+                          </Box>
+                          <Box sx={{ minWidth: 35 }}>
+                            <Typography variant="body2" color="text.secondary">{`${lop.currentEnrollment}/${lop.maxCapacity}`}</Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
                       <TableCell>
                         <Chip
                           label={lop.status}
@@ -581,6 +636,18 @@ const ClassListPage: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell align="center">
+                        {lop.currentEnrollment < lop.maxCapacity && (
+                          <Tooltip title="Thêm học viên">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => handleOpenAddStudentDialog(lop.classId)}
+                            >
+                              <FontAwesomeIcon icon={faUserPlus} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+
                         <Tooltip title="Chỉnh sửa lớp học">
                           <IconButton
                             size="small"
@@ -604,7 +671,7 @@ const ClassListPage: React.FC = () => {
                           </IconButton>
                         </Tooltip>
 
-                        <Tooltip title="Đổi trạng thái của lớp học">
+                        {/* <Tooltip title="Đổi trạng thái của lớp học">
                           <IconButton
                             size="small"
                             color="default"
@@ -616,7 +683,7 @@ const ClassListPage: React.FC = () => {
                               <FontAwesomeIcon icon={faLockOpen} />
                             )}
                           </IconButton>
-                        </Tooltip>
+                        </Tooltip> */}
                       </TableCell>
                     </TableRow>
                   )
@@ -657,6 +724,13 @@ const ClassListPage: React.FC = () => {
         onConfirm={handleConfirmUpdate}
         originalClassId={targetClassId}
         selectedAlternative={selectedAlt}
+      />
+
+      <AddStudentDialog
+        open={addStudentDialogOpen}
+        onClose={() => setAddStudentDialogOpen(false)}
+        onAdd={handleAddStudent}
+        classId={selectedClassIdForAddStudent}
       />
 
       {/* --- SNACKBAR HIỂN THỊ THÀNH CÔNG --- */}

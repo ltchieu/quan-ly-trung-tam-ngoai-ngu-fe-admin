@@ -32,6 +32,21 @@ export const updateStudentInfo = async (data: Partial<StudentModel>): Promise<vo
   }
 };
 
+export const createStudent = async (data: any): Promise<StudentModel> => {
+  try {
+    const response = await axiosClient.post<ApiResponse<StudentModel>>("/students", data);
+    if (response.data && response.data.code === 1000 && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data?.message || "Failed to create student");
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Create Student API error:", message);
+    throw new Error(message);
+  }
+};
+
 const MOCK_STUDENTS: StudentModel[] = Array.from({ length: 50 }).map((_, index) => ({
   mahocvien: index + 1,
   manguoidung: 100 + index,
