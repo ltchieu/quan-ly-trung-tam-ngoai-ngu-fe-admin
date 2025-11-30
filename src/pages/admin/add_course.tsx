@@ -21,7 +21,8 @@ import Step1CourseInfo from "../../component/add_course_infor";
 import Step2Curriculum from "../../component/add_module_objective";
 import Step3Content from "../../component/add_course_content";
 import { useNavigate } from "react-router-dom";
-import { createNewCourse, getImageUrl } from "../../services/course_service";
+import { createNewCourse } from "../../services/course_service";
+import { getImageUrl } from "../../services/file_service";
 import InputFileUpload from "../../component/button_upload_file";
 
 export interface DocumentData {

@@ -2,7 +2,7 @@ import { styled } from "@mui/material/styles";
 import Button from "@mui/material/Button";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { useState } from "react";
-import { uploadImage } from "../services/course_service";
+import { uploadImage } from "../services/file_service";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -31,10 +31,11 @@ const InputFileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
 
     setLoading(true);
     try {
-      const response = await uploadImage(file);
-      const fileUrl = response.data.data.fileUrl;;
+      const fileName = await uploadImage(file);
 
-      onUploadSuccess(fileUrl);
+      console.log(fileName);
+      onUploadSuccess(fileName);
+
     } catch (error) {
       console.error("Lỗi khi upload file:", error);
       alert("Upload ảnh thất bại!");

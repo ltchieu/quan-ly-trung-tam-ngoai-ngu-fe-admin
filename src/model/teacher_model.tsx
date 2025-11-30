@@ -7,23 +7,39 @@ export interface BangCap {
   ma: number;
   maGiangVien: number;
   maLoai: number;
-  trinhDo: string; // Specific level or classification
-  loaiBangCap?: LoaiBangCap; // For display purposes
+  trinhDo: string;
+  loaiBangCap?: LoaiBangCap
 }
 
 export interface GiangVien {
   magv: number;
   hoten: string;
   ngaysinh: string;
-  gioitinh: boolean; // true: Nam, false: Nữ
+  gioitinh: boolean;
   sdt: string;
   email: string;
   diachi: string;
   anhdaidien: string;
-  bangCaps: BangCap[]; // List of degrees
+  bangCaps: BangCap[];
   mota?: string;
 }
 
 export interface TeacherFilter {
   keyword?: string;
+}
+
+export interface QualificationDTO {
+  degreeId: number;
+  degreeName: string;
+  level: string;
+}
+
+export interface TeacherInfo {
+  lecturerId: number;
+  fullName: string;
+  dateOfBirth: string;
+  imagePath: string;
+  phoneNumber: string;
+  email: string;
+  qualifications: QualificationDTO[];
 }

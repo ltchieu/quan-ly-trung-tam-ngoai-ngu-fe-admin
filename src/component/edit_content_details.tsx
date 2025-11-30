@@ -24,7 +24,8 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
 import InputFileUpload from "./button_upload_file";
-import { getImageUrl, updateModule } from "../services/course_service";
+import { updateModule } from "../services/course_service";
+import { getImageUrl } from "../services/file_service";
 import {
   ContentData,
   DocumentDataForModule,
@@ -93,7 +94,7 @@ const EditContentDetails: React.FC<Props> = ({
   const handleContentInputChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const {value } = event.target;
+    const { value } = event.target;
     setNewContent(value);
   };
 
@@ -310,9 +311,8 @@ const EditContentDetails: React.FC<Props> = ({
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 {/* ... Accordion Summary (Module Name, Duration) ... */}
-                <Typography fontWeight="bold">{`Module ${moduleIndex + 1}: ${
-                  module.moduleName
-                }`}</Typography>
+                <Typography fontWeight="bold">{`Module ${moduleIndex + 1}: ${module.moduleName
+                  }`}</Typography>
                 {module.duration > 0 && (
                   <Typography
                     sx={{ color: "text.secondary", ml: 1 }}
@@ -497,7 +497,7 @@ const EditContentDetails: React.FC<Props> = ({
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 required
                 name="tenfile"
@@ -508,7 +508,7 @@ const EditContentDetails: React.FC<Props> = ({
                 size="small"
               />
             </Grid>
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 name="link"
                 label="Link (nếu có)"
@@ -518,7 +518,7 @@ const EditContentDetails: React.FC<Props> = ({
                 size="small"
               />
             </Grid>
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 name="mota"
                 label="Mô tả"
@@ -530,8 +530,8 @@ const EditContentDetails: React.FC<Props> = ({
                 size="small"
               />
             </Grid>
-            <Grid size={{xs: 12}} container alignItems="center" spacing={2}>
-              <Grid size={{xs: 8}}>
+            <Grid size={{ xs: 12 }} container alignItems="center" spacing={2}>
+              <Grid size={{ xs: 8 }}>
                 <TextField
                   name="hinh"
                   label="Ảnh (tên file)"
@@ -541,13 +541,13 @@ const EditContentDetails: React.FC<Props> = ({
                   size="small"
                 />
               </Grid>
-              <Grid size={{xs: 4}}>
+              <Grid size={{ xs: 4 }}>
                 <InputFileUpload onUploadSuccess={handleDocImageUpload} />
               </Grid>
             </Grid>
 
             {imgPreviewUrl && (
-              <Grid size={{xs: 12}} >
+              <Grid size={{ xs: 12 }} >
                 <Box
                   component="img"
                   src={imgPreviewUrl}

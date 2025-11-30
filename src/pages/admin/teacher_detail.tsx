@@ -6,50 +6,48 @@ import {
   Card,
   Grid,
   TextField,
-  FormControl,
   Breadcrumbs,
   Link,
   Stack,
   CircularProgress,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  FormLabel,
   Chip,
+  Avatar,
+  IconButton,
+  CardContent,
+  Divider,
+  Box
 } from "@mui/material";
-import { School } from "@mui/icons-material";
+import { School, PhotoCamera, Save, ArrowBack } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
-import { getTeacherById, updateTeacher } from "../../services/teacher_service";
+import { getTeacherInfoById, updateTeacher } from "../../services/teacher_service";
+import { TeacherInfo } from "../../model/teacher_model";
+import { getImageUrl, uploadImage } from "../../services/file_service";
 
 const TeacherDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [teacherDegrees, setTeacherDegrees] = useState<any[]>([]);
+  const [teacherInfo, setTeacherInfo] = useState<TeacherInfo | null>(null);
 
   const formik = useFormik({
     initialValues: {
       hoten: "",
       ngaysinh: dayjs(),
-      gioitinh: "true",
       sdt: "",
       email: "",
-      diachi: "",
       anhdaidien: "",
-      mota: "",
     },
     validationSchema: Yup.object({
       hoten: Yup.string().required("Vui lòng nhập họ tên"),
       ngaysinh: Yup.date().required("Vui lòng chọn ngày sinh"),
       sdt: Yup.string().required("Vui lòng nhập số điện thoại"),
       email: Yup.string().email("Email không hợp lệ").required("Vui lòng nhập email"),
-      diachi: Yup.string().required("Vui lòng nhập địa chỉ"),
     }),
     onSubmit: async (values) => {
       if (!id) return;
@@ -58,12 +56,9 @@ const TeacherDetailPage: React.FC = () => {
         await updateTeacher(Number(id), {
           hoten: values.hoten,
           ngaysinh: values.ngaysinh.format("YYYY-MM-DD"),
-          gioitinh: values.gioitinh === "true",
           sdt: values.sdt,
           email: values.email,
-          diachi: values.diachi,
           anhdaidien: values.anhdaidien,
-          mota: values.mota,
         });
         alert("Cập nhật giảng viên thành công!");
         navigate("/teachers");
@@ -80,19 +75,16 @@ const TeacherDetailPage: React.FC = () => {
     const fetchTeacher = async () => {
       setLoading(true);
       try {
-        const teacher = await getTeacherById(Number(id));
-        if (teacher) {
+        const info = await getTeacherInfoById(id);
+        if (info) {
+          setTeacherInfo(info);
           formik.setValues({
-            hoten: teacher.hoten,
-            ngaysinh: dayjs(teacher.ngaysinh),
-            gioitinh: String(teacher.gioitinh),
-            sdt: teacher.sdt,
-            email: teacher.email,
-            diachi: teacher.diachi,
-            anhdaidien: teacher.anhdaidien,
-            mota: teacher.mota || "",
+            hoten: info.fullName,
+            ngaysinh: dayjs(info.dateOfBirth),
+            sdt: info.phoneNumber,
+            email: info.email,
+            anhdaidien: info.imagePath,
           });
-          setTeacherDegrees(teacher.bangCaps || []);
         } else {
           alert("Không tìm thấy giảng viên");
           navigate("/teachers");
@@ -105,6 +97,19 @@ const TeacherDetailPage: React.FC = () => {
     };
     fetchTeacher();
   }, [id]);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      try {
+        const fileName = await uploadImage(file);
+        formik.setFieldValue("anhdaidien", fileName);
+      } catch (error) {
+        console.error("Error uploading avatar:", error);
+        alert("Upload ảnh thất bại");
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -128,30 +133,115 @@ const TeacherDetailPage: React.FC = () => {
           <Typography color="text.primary">Chi tiết</Typography>
         </Breadcrumbs>
 
-        <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>
-          Chi tiết Giảng viên
-        </Typography>
+        {/* Header with Actions */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
+          <Typography variant="h4" fontWeight="bold">
+            Chi tiết Giảng viên
+          </Typography>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate("/teachers")}
+            >
+              Quay lại
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Save />}
+              onClick={() => formik.handleSubmit()}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+            </Button>
+          </Stack>
+        </Box>
 
-        <form onSubmit={formik.handleSubmit}>
-          <Grid container spacing={3}>
-            {/* Left Column: Personal Info */}
-            <Grid size={{ xs: 12, md: 8 }}>
-              <Card sx={{ p: 3, mb: 3 }}>
-                <Typography variant="h6" gutterBottom fontWeight="bold">
-                  Thông tin cá nhân
-                </Typography>
-                <Stack spacing={3}>
-                  <TextField
-                    fullWidth
-                    label="Họ tên"
-                    name="hoten"
-                    value={formik.values.hoten}
-                    onChange={formik.handleChange}
-                    error={formik.touched.hoten && Boolean(formik.errors.hoten)}
-                    helperText={formik.touched.hoten && formik.errors.hoten}
+        <Grid container spacing={3}>
+          {/* Left Column: Avatar & Basic Info */}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Card sx={{ textAlign: "center", p: 2 }}>
+              <CardContent>
+                <Box sx={{ position: "relative", display: "inline-block", mb: 2 }}>
+                  <Avatar
+                    src={formik.values.anhdaidien ? getImageUrl(formik.values.anhdaidien) : undefined}
+                    sx={{ width: 120, height: 120, mb: 2, mx: "auto", border: "4px solid white", boxShadow: 2 }}
                   />
+                  <IconButton
+                    color="primary"
+                    aria-label="upload picture"
+                    component="label"
+                    sx={{
+                      position: "absolute",
+                      bottom: 0,
+                      right: 0,
+                      bgcolor: "background.paper",
+                      boxShadow: 1,
+                      "&:hover": { bgcolor: "grey.200" },
+                    }}
+                  >
+                    <input hidden accept="image/*" type="file" onChange={handleAvatarChange} />
+                    <PhotoCamera />
+                  </IconButton>
+                </Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {teacherInfo?.fullName}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  {teacherInfo?.email}
+                </Typography>
+                <Chip label="Giảng viên" color="primary" size="small" sx={{ mt: 1 }} />
+              </CardContent>
+            </Card>
 
-                  <Stack direction="row" spacing={2}>
+            <Card sx={{ mt: 3 }}>
+              <CardContent>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Bằng cấp & Chứng chỉ
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  {teacherInfo?.qualifications && teacherInfo.qualifications.length > 0 ? (
+                    teacherInfo.qualifications.map((degree, index) => (
+                      <Chip
+                        key={index}
+                        icon={<School />}
+                        label={`${degree.degreeName} - ${degree.level}`}
+                        variant="outlined"
+                        color="secondary"
+                      />
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Chưa có thông tin bằng cấp
+                    </Typography>
+                  )}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Right Column: Detailed Info Form */}
+          <Grid size={{ xs: 12, md: 8 }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Thông tin chi tiết
+                </Typography>
+                <Divider sx={{ mb: 3 }} />
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      label="Họ và tên"
+                      name="hoten"
+                      value={formik.values.hoten}
+                      onChange={formik.handleChange}
+                      error={formik.touched.hoten && Boolean(formik.errors.hoten)}
+                      helperText={formik.touched.hoten && formik.errors.hoten}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <DatePicker
                       label="Ngày sinh"
                       value={formik.values.ngaysinh}
@@ -159,143 +249,39 @@ const TeacherDetailPage: React.FC = () => {
                       slotProps={{
                         textField: {
                           fullWidth: true,
-                          error:
-                            formik.touched.ngaysinh &&
-                            Boolean(formik.errors.ngaysinh),
-                          helperText:
-                            formik.touched.ngaysinh &&
-                            (formik.errors.ngaysinh as string),
+                          error: formik.touched.ngaysinh && Boolean(formik.errors.ngaysinh),
+                          helperText: formik.touched.ngaysinh && (formik.errors.ngaysinh as string),
                         },
                       }}
                     />
-                    <FormControl>
-                      <FormLabel>Giới tính</FormLabel>
-                      <RadioGroup
-                        row
-                        name="gioitinh"
-                        value={formik.values.gioitinh}
-                        onChange={formik.handleChange}
-                      >
-                        <FormControlLabel
-                          value="true"
-                          control={<Radio />}
-                          label="Nam"
-                        />
-                        <FormControlLabel
-                          value="false"
-                          control={<Radio />}
-                          label="Nữ"
-                        />
-                      </RadioGroup>
-                    </FormControl>
-                  </Stack>
-
-                  <TextField
-                    fullWidth
-                    label="Số điện thoại"
-                    name="sdt"
-                    value={formik.values.sdt}
-                    onChange={formik.handleChange}
-                    error={formik.touched.sdt && Boolean(formik.errors.sdt)}
-                    helperText={formik.touched.sdt && formik.errors.sdt}
-                  />
-
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    name="email"
-                    value={formik.values.email}
-                    onChange={formik.handleChange}
-                    error={formik.touched.email && Boolean(formik.errors.email)}
-                    helperText={formik.touched.email && formik.errors.email}
-                  />
-
-                  <TextField
-                    fullWidth
-                    label="Địa chỉ"
-                    name="diachi"
-                    value={formik.values.diachi}
-                    onChange={formik.handleChange}
-                    error={formik.touched.diachi && Boolean(formik.errors.diachi)}
-                    helperText={formik.touched.diachi && formik.errors.diachi}
-                  />
-                </Stack>
-              </Card>
-
-              <Card sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom fontWeight="bold">
-                  Thông tin chuyên môn
-                </Typography>
-                <Stack spacing={3}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Bằng cấp
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
-                    {teacherDegrees.length > 0 ? (
-                      teacherDegrees.map((degree, index) => (
-                        <Chip
-                          key={index}
-                          icon={<School />}
-                          label={`${degree.loaiBangCap?.ten || "Bằng cấp"} - ${degree.trinhDo}`}
-                          variant="outlined"
-                        />
-                      ))
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        Chưa có thông tin bằng cấp
-                      </Typography>
-                    )}
-                  </Stack>
-
-                  <TextField
-                    fullWidth
-                    label="Link ảnh đại diện"
-                    name="anhdaidien"
-                    value={formik.values.anhdaidien}
-                    onChange={formik.handleChange}
-                    placeholder="https://example.com/avatar.jpg"
-                  />
-
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    label="Mô tả"
-                    name="mota"
-                    value={formik.values.mota}
-                    onChange={formik.handleChange}
-                  />
-                </Stack>
-              </Card>
-            </Grid>
-
-            {/* Right Column: Actions */}
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Card sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom fontWeight="bold">
-                  Hành động
-                </Typography>
-                <Stack spacing={2}>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    type="submit"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? <CircularProgress size={24} /> : "Cập nhật"}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    onClick={() => navigate("/teachers")}
-                  >
-                    Hủy bỏ
-                  </Button>
-                </Stack>
-              </Card>
-            </Grid>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      label="Số điện thoại"
+                      name="sdt"
+                      value={formik.values.sdt}
+                      onChange={formik.handleChange}
+                      error={formik.touched.sdt && Boolean(formik.errors.sdt)}
+                      helperText={formik.touched.sdt && formik.errors.sdt}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      name="email"
+                      value={formik.values.email}
+                      onChange={formik.handleChange}
+                      error={formik.touched.email && Boolean(formik.errors.email)}
+                      helperText={formik.touched.email && formik.errors.email}
+                    />
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
           </Grid>
-        </form>
+        </Grid>
       </Container>
     </LocalizationProvider>
   );

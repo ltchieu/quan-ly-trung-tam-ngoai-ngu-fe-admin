@@ -1,4 +1,39 @@
-import { GiangVien, TeacherFilter, LoaiBangCap, BangCap } from "../model/teacher_model";
+import { axiosClient } from "../api/axios_client";
+import { GiangVien, LoaiBangCap, BangCap, TeacherInfo } from "../model/teacher_model";
+import { ApiResponse } from "../model/api_respone";
+
+export const getTeacherInfoById = async (id?: number | string): Promise<TeacherInfo> => {
+  try {
+    const role = localStorage.getItem("role");
+    let url = "";
+
+    if (role?.toUpperCase() === "LECTURER") {
+      url = "/lecturers/me";
+    } else if (role?.toUpperCase() === "ADMIN" && id) {
+      url = `/lecturers/${id}`;
+    } else {
+      // Default or fallback if needed, or throw error if neither matches expectations
+      // For now, let's assume if ID is provided we try to fetch by ID, otherwise me?
+      // But the requirement is specific.
+      if (id) url = `/lecturers/${id}`;
+      else url = "/lecturers/me";
+    }
+
+    const response = await axiosClient.get<ApiResponse<TeacherInfo>>(url);
+    if (response.data && response.data.code === 1000 && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data?.message || "Failed to fetch teacher profile");
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Get Teacher Profile API error:", message);
+    throw new Error(message);
+  }
+};
+
+
+
 
 // Mock data for Degree Types
 const MOCK_DEGREE_TYPES: LoaiBangCap[] = [
@@ -53,11 +88,6 @@ export const getAllTeachers = async (page: number = 0, limit: number = 10, keywo
   };
 };
 
-export const getTeacherById = async (id: number): Promise<GiangVien | undefined> => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return MOCK_TEACHERS.find((t) => t.magv === id);
-};
-
 export const createTeacher = async (teacher: Omit<GiangVien, "magv">): Promise<GiangVien> => {
   await new Promise((resolve) => setTimeout(resolve, 500));
   const newId = Math.max(...MOCK_TEACHERS.map((t) => t.magv), 0) + 1;
@@ -80,12 +110,6 @@ export const deleteTeacher = async (id: number): Promise<void> => {
   MOCK_TEACHERS = MOCK_TEACHERS.filter((t) => t.magv !== id);
 };
 
-export const getTeacherProfileMock = async (userId: number | string): Promise<GiangVien> => {
-  // Mock fetching profile based on logged-in user ID
-  // For now, return the first teacher or a specific one
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return MOCK_TEACHERS[0];
-};
 
 export const updateTeacherProfileMock = async (profile: GiangVien): Promise<GiangVien | null> => {
   await new Promise((resolve) => setTimeout(resolve, 800));

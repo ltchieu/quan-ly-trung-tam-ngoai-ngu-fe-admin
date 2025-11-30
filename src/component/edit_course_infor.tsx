@@ -9,7 +9,8 @@ import {
   Alert,
   InputAdornment,
 } from "@mui/material";
-import { updateCourse, getImageUrl } from "../services/course_service";
+import { updateCourse } from "../services/course_service";
+import { getImageUrl } from "../services/file_service";
 import InputFileUpload from "./button_upload_file";
 import { CourseDetails, CourseUpdateRequest } from "../model/course_model";
 

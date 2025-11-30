@@ -26,7 +26,7 @@ import { DocumentData, NewCourseState } from "../pages/admin/add_course";
 import InputFileUpload from "./button_upload_file";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
-import { getImageUrl } from "../services/course_service";
+import { getImageUrl } from "../services/file_service";
 
 interface Props {
   data: NewCourseState;

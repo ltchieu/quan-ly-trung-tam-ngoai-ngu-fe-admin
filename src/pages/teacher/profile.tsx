@@ -29,13 +29,15 @@ import {
     Delete,
 } from "@mui/icons-material";
 import { useAuth } from "../../hook/useAuth";
-import { getTeacherProfileMock, updateTeacherProfileMock, getDegreeTypesMock, addTeacherDegreeMock, deleteTeacherDegreeMock } from "../../services/teacher_service";
-import { GiangVien, LoaiBangCap, BangCap } from "../../model/teacher_model";
+import { getTeacherInfoById, getDegreeTypesMock, addTeacherDegreeMock, deleteTeacherDegreeMock } from "../../services/teacher_service";
+
+import { LoaiBangCap, TeacherInfo, QualificationDTO } from "../../model/teacher_model";
 import { MenuItem, Select, InputLabel, FormControl } from "@mui/material";
+import { getImageUrl, uploadImage } from "../../services/file_service";
 
 const TeacherProfile: React.FC = () => {
     const { userId } = useAuth();
-    const [profile, setProfile] = useState<GiangVien | null>(null);
+    const [profile, setProfile] = useState<TeacherInfo | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [saving, setSaving] = useState<boolean>(false);
     const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -60,10 +62,9 @@ const TeacherProfile: React.FC = () => {
                 ]);
                 setDegreeTypes(types);
 
-                if (userId) {
-                    const data = await getTeacherProfileMock(userId);
-                    setProfile(data);
-                }
+                const info = await getTeacherInfoById();
+                setProfile(info);
+
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
@@ -74,6 +75,29 @@ const TeacherProfile: React.FC = () => {
         fetchData();
     }, [userId]);
 
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0] && profile) {
+            const file = e.target.files[0];
+            try {
+
+                const fileName = await uploadImage(file);
+                setProfile({ ...profile, imagePath: fileName });
+                setNotification({
+                    open: true,
+                    message: "Cập nhật ảnh đại diện thành công!",
+                    severity: "success",
+                });
+            } catch (error) {
+                console.error("Error uploading avatar:", error);
+                setNotification({
+                    open: true,
+                    message: "Cập nhật ảnh đại diện thất bại.",
+                    severity: "error",
+                });
+            }
+        }
+    };
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (profile) {
             setProfile({ ...profile, [e.target.name]: e.target.value });
@@ -81,52 +105,50 @@ const TeacherProfile: React.FC = () => {
     };
 
     const handleSave = async () => {
-        if (profile) {
-            try {
-                setSaving(true);
-                await updateTeacherProfileMock(profile);
-                setNotification({
-                    open: true,
-                    message: "Cập nhật thông tin thành công!",
-                    severity: "success",
-                });
-                setIsEditing(false);
-            } catch (error) {
-                console.error("Error updating profile:", error);
-                setNotification({
-                    open: true,
-                    message: "Cập nhật thất bại. Vui lòng thử lại.",
-                    severity: "error",
-                });
-            } finally {
-                setSaving(false);
-            }
-        }
+        // if (profile) {
+        //     try {
+        //         setSaving(true);
+        //         await updateTeacherProfileMock(profile);
+        //         setNotification({
+        //             open: true,
+        //             message: "Cập nhật thông tin thành công!",
+        //             severity: "success",
+        //         });
+        //         setIsEditing(false);
+        //     } catch (error) {
+        //         console.error("Error updating profile:", error);
+        //         setNotification({
+        //             open: true,
+        //             message: "Cập nhật thất bại. Vui lòng thử lại.",
+        //             severity: "error",
+        //         });
+        //     } finally {
+        //         setSaving(false);
+        //     }
+        // }
     };
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0] && profile) {
-            // In a real app, upload file to server and get URL
-            // Here we just use a local object URL for preview
-            const file = e.target.files[0];
-            const imageUrl = URL.createObjectURL(file);
-            setProfile({ ...profile, anhdaidien: imageUrl });
-        }
-    };
+
 
     const handleAddDegree = async () => {
         if (profile && newDegreeType && newDegreeLevel.trim()) {
             try {
                 const degreeToAdd: any = {
-                    maGiangVien: profile.magv,
+                    maGiangVien: profile.lecturerId,
                     maLoai: Number(newDegreeType),
                     trinhDo: newDegreeLevel.trim(),
                 };
                 const addedDegree = await addTeacherDegreeMock(degreeToAdd);
 
+                const newQualification: QualificationDTO = {
+                    degreeId: addedDegree.ma,
+                    degreeName: addedDegree.loaiBangCap?.ten || "Unknown",
+                    level: addedDegree.trinhDo
+                };
+
                 // Update local profile state
-                const updatedBangCaps = [...(profile.bangCaps || []), addedDegree];
-                setProfile({ ...profile, bangCaps: updatedBangCaps });
+                const updatedQualifications = [...(profile.qualifications || []), newQualification];
+                setProfile({ ...profile, qualifications: updatedQualifications });
 
                 setNewDegreeType("");
                 setNewDegreeLevel("");
@@ -144,8 +166,8 @@ const TeacherProfile: React.FC = () => {
             try {
                 await deleteTeacherDegreeMock(degreeId);
                 // Update local profile state
-                const updatedBangCaps = (profile.bangCaps || []).filter(d => d.ma !== degreeId);
-                setProfile({ ...profile, bangCaps: updatedBangCaps });
+                const updatedQualifications = (profile.qualifications || []).filter(d => d.degreeId !== degreeId);
+                setProfile({ ...profile, qualifications: updatedQualifications });
                 setNotification({ open: true, message: "Xóa bằng cấp thành công", severity: "success" });
             } catch (error) {
                 console.error("Failed to delete degree", error);
@@ -162,7 +184,7 @@ const TeacherProfile: React.FC = () => {
         return <Box sx={{ p: 3 }}>Đang tải thông tin...</Box>;
     }
 
-    const degrees = profile.bangCaps || [];
+    const degrees = profile.qualifications || [];
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -187,7 +209,7 @@ const TeacherProfile: React.FC = () => {
                         <CardContent>
                             <Box sx={{ position: "relative", display: "inline-block", mb: 2 }}>
                                 <Avatar
-                                    src={profile.anhdaidien}
+                                    src={getImageUrl(profile.imagePath)}
                                     sx={{ width: 120, height: 120, mb: 2, mx: "auto", border: "4px solid white", boxShadow: 2 }}
                                 />
                                 {isEditing && (
@@ -210,7 +232,7 @@ const TeacherProfile: React.FC = () => {
                                 )}
                             </Box>
                             <Typography variant="h5" fontWeight="bold">
-                                {profile.hoten}
+                                {profile.fullName}
                             </Typography>
                             <Typography variant="body2" color="text.secondary" gutterBottom>
                                 {profile.email}
@@ -227,10 +249,10 @@ const TeacherProfile: React.FC = () => {
                             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                                 {degrees.map((degree) => (
                                     <Chip
-                                        key={degree.ma}
+                                        key={degree.degreeId}
                                         icon={<School />}
-                                        label={`${degree.loaiBangCap?.ten} - ${degree.trinhDo}`}
-                                        onDelete={isEditing ? () => handleRemoveDegree(degree.ma) : undefined}
+                                        label={`${degree.degreeName} - ${degree.level}`}
+                                        onDelete={isEditing ? () => handleRemoveDegree(degree.degreeId) : undefined}
                                         color="secondary"
                                         variant="outlined"
                                     />
@@ -264,7 +286,7 @@ const TeacherProfile: React.FC = () => {
                                         fullWidth
                                         label="Họ và tên"
                                         name="hoten"
-                                        value={profile.hoten}
+                                        value={profile.fullName}
                                         onChange={handleInputChange}
                                         disabled={!isEditing}
                                         variant={isEditing ? "outlined" : "filled"}
@@ -276,7 +298,7 @@ const TeacherProfile: React.FC = () => {
                                         label="Ngày sinh"
                                         name="ngaysinh"
                                         type="date"
-                                        value={profile.ngaysinh}
+                                        value={profile.dateOfBirth}
                                         onChange={handleInputChange}
                                         disabled={!isEditing}
                                         variant={isEditing ? "outlined" : "filled"}
@@ -288,7 +310,7 @@ const TeacherProfile: React.FC = () => {
                                         fullWidth
                                         label="Số điện thoại"
                                         name="sdt"
-                                        value={profile.sdt}
+                                        value={profile.phoneNumber}
                                         onChange={handleInputChange}
                                         disabled={!isEditing}
                                         variant={isEditing ? "outlined" : "filled"}
@@ -303,30 +325,6 @@ const TeacherProfile: React.FC = () => {
                                         onChange={handleInputChange}
                                         disabled={true} // Email usually not editable directly
                                         variant="filled"
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 12 }}>
-                                    <TextField
-                                        fullWidth
-                                        label="Địa chỉ"
-                                        name="diachi"
-                                        value={profile.diachi}
-                                        onChange={handleInputChange}
-                                        disabled={!isEditing}
-                                        variant={isEditing ? "outlined" : "filled"}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 12 }}>
-                                    <TextField
-                                        fullWidth
-                                        label="Mô tả / Giới thiệu"
-                                        name="mota"
-                                        value={profile.mota || ""}
-                                        onChange={handleInputChange}
-                                        disabled={!isEditing}
-                                        multiline
-                                        rows={4}
-                                        variant={isEditing ? "outlined" : "filled"}
                                     />
                                 </Grid>
                             </Grid>

@@ -1,4 +1,4 @@
-import { axiosClient, axiosMultipart } from "../api/axios_client";
+import { axiosClient } from "../api/axios_client";
 import { ApiResponse } from "../model/api_respone";
 import {
   CourseCreateRequest,
@@ -90,17 +90,7 @@ export function createNewCourse(courseData: NewCourseState) {
   return axiosClient.post("/courses", requestData);
 }
 
-//Upload ảnh
-export function uploadImage(file: File) {
-  const formData = new FormData();
-  formData.append("file", file);
-  return axiosMultipart.post("/files", formData);
-}
 
-//Lấy đường dẫn ảnh
-export function getImageUrl(fileName: string): string {
-  return `${axiosClient.defaults.baseURL}/files/${fileName}`;
-}
 
 export function changeCourseStatus(courseId: number) {
   const url = `/courses/status/${courseId}`;
