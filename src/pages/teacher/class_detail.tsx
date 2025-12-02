@@ -153,6 +153,9 @@ const TeacherClassDetail: React.FC = () => {
                     <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate("/teacher/classes")}>
                         Quay lại
                     </Button>
+                    <Button variant="outlined" color="primary" onClick={() => navigate(`/teacher/classes/${classId}/scores`)}>
+                        Quản lý điểm
+                    </Button>
                     <Button variant="contained" color="primary" onClick={() => navigate(`/teacher/classes/${classId}/attendance`)}>
                         Điểm danh
                     </Button>

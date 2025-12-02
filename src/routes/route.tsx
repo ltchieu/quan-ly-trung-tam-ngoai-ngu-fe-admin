@@ -26,6 +26,7 @@ import TeacherClassDetail from "../pages/teacher/class_detail";
 import TeacherAttendance from "../pages/teacher/attendance";
 import TeacherAttendanceList from "../pages/teacher/attendance_list";
 import TeacherProfile from "../pages/teacher/profile";
+import TeacherScoreManagement from "../pages/teacher/score_management";
 import CategoryPage from "../pages/admin/category_page";
 import RoomPage from "../pages/admin/room_page";
 import Unauthorized from "../pages/unauthorized";
@@ -94,6 +95,7 @@ function AppRoutes() {
                 <Route path="/teacher/classes" element={<TeacherClassList />} />
                 <Route path="/teacher/classes/:classId" element={<TeacherClassDetail />} />
                 <Route path="/teacher/classes/:classId/attendance" element={<TeacherAttendance />} />
+                <Route path="/teacher/classes/:classId/scores" element={<TeacherScoreManagement />} />
                 <Route path="/teacher/attendance" element={<TeacherAttendanceList />} />
                 <Route path="/teacher/profile" element={<TeacherProfile />} />
               </Route>
