@@ -14,3 +14,18 @@ export interface TokenRefreshResponse {
   accessToken: string;
   refreshToken: string;
 }
+
+// Forgot Password & Reset Password Models
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface VerifyResetCodeResponse {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  code: string;
+  newPassword: string;
+  confirmPassword: string;
+}

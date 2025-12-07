@@ -235,17 +235,24 @@ const Login = () => {
               fullWidth
               sx={{ mb: "5px" }}
             />
-            <a
-              href="#"
-              style={{
+            <Box
+              component="a"
+              onClick={(e: React.MouseEvent) => {
+                e.preventDefault();
+                navigate("/forgot-password");
+              }}
+              sx={{
                 color: "black",
                 fontWeight: "bold",
                 textDecoration: "underline",
                 cursor: "pointer",
+                "&:hover": {
+                  color: "#0A9396",
+                },
               }}
             >
-              Forgot password
-            </a>
+              Quên mật khẩu?
+            </Box>
           </Box>
 
           <Button

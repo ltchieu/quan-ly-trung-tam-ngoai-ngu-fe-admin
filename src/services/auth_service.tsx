@@ -65,3 +65,75 @@ export async function refreshToken(): Promise<TokenRefreshResponse> {
     throw new Error(message);
   }
 }
+
+// Forgot Password & Reset Password Services
+export async function forgotPasswordService(
+  email: string
+): Promise<ApiResponse<void>> {
+  try {
+    const response = await axiosClient.post<ApiResponse<void>>(
+      "/auth/forgot-password",
+      { email }
+    );
+
+    if (response.data && response.data.code === 1000) {
+      return response.data;
+    } else {
+      throw new Error(
+        response.data?.message || "Không thể gửi email reset password"
+      );
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Forgot password API error:", message);
+    throw new Error(message);
+  }
+}
+
+export async function verifyResetCodeService(
+  code: string
+): Promise<ApiResponse<{ email: string }>> {
+  try {
+    const response = await axiosClient.get<ApiResponse<{ email: string }>>(
+      `/auth/verify-reset-code`,
+      { params: { code } }
+    );
+
+    if (response.data && response.data.code === 1000) {
+      return response.data;
+    } else {
+      throw new Error(
+        response.data?.message || "Mã xác minh không hợp lệ"
+      );
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Verify reset code API error:", message);
+    throw new Error(message);
+  }
+}
+
+export async function resetPasswordService(
+  code: string,
+  newPassword: string,
+  confirmPassword: string
+): Promise<ApiResponse<void>> {
+  try {
+    const response = await axiosClient.post<ApiResponse<void>>(
+      "/auth/reset-password",
+      { code, newPassword, confirmPassword }
+    );
+
+    if (response.data && response.data.code === 1000) {
+      return response.data;
+    } else {
+      throw new Error(
+        response.data?.message || "Không thể đặt lại mật khẩu"
+      );
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Reset password API error:", message);
+    throw new Error(message);
+  }
+}

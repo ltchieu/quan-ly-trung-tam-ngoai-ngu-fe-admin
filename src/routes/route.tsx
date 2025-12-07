@@ -7,6 +7,8 @@ import CreateCoursePage from "../pages/admin/add_course";
 import EditCourse from "../pages/admin/edit_course";
 import ClassListPage from "../pages/admin/class";
 import Login from "../auth/login";
+import ForgotPassword from "../auth/forgot_password";
+import ResetPassword from "../auth/reset_password";
 import { useAuth } from "../hook/useAuth";
 import ProtectedRoute from "./protected_route";
 import Timetable from "../pages/admin/schedule";
@@ -116,6 +118,10 @@ function AppRoutes() {
 
         {/* Login Route */}
         <Route path="/login" element={<Login />}></Route>
+
+        {/* Forgot Password Routes */}
+        <Route path="/forgot-password" element={<ForgotPassword />}></Route>
+        <Route path="/reset-password" element={<ResetPassword />}></Route>
 
         {/* Catch-all route */}
         <Route
