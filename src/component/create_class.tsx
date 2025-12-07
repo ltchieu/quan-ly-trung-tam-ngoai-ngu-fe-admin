@@ -23,6 +23,7 @@ import {
   FormControlLabel,
   FormGroup,
   FormLabel,
+  Paper,
 } from "@mui/material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -32,11 +33,19 @@ import { checkAndSuggestSchedule } from "../services/schedule_service";
 import {
   ScheduleSuggestionResponse,
   ScheduleAlternative,
-  ResourceOption,
+  ResourceInfo,
   ScheduleCheckRequest,
 } from "../model/schedule_model";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faClock } from "@fortawesome/free-solid-svg-icons";
+import { 
+  faCalendar, 
+  faClock, 
+  faExclamationTriangle,
+  faBan,
+  faChalkboardTeacher,
+  faBook,
+  faDoorOpen
+} from "@fortawesome/free-solid-svg-icons";
 import {
   DatePicker,
   LocalizationProvider,
@@ -124,9 +133,9 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
     useState<ScheduleSuggestionResponse | null>(null);
 
   // Danh sách phòng/GV khả dụng
-  const [availableRooms, setAvailableRooms] = useState<ResourceOption[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<ResourceInfo[]>([]);
   const [availableLecturers, setAvailableLecturers] = useState<
-    ResourceOption[]
+    ResourceInfo[]
   >([]);
 
   const [isCreating, setIsCreating] = useState(false);
@@ -433,8 +442,8 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       console.log("result check lich trùng: ", suggestionResult);
       if (result.status === "AVAILABLE") {
         // Nếu Available: Cập nhật danh sách chọn
-        setAvailableRooms(result.availableRooms);
-        setAvailableLecturers(result.availableLecturers);
+        setAvailableRooms(result.availableRooms || []);
+        setAvailableLecturers(result.availableLecturers || []);
       } else {
         // Nếu Conflict: Xóa danh sách chọn để user phải xem gợi ý hoặc chọn lại
         setAvailableRooms([]);
@@ -460,8 +469,8 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
     formik.setFieldValue("schedulePattern", alt.schedulePattern);
 
     // Cập nhật ngay danh sách Resource từ Alternative
-    setAvailableRooms(alt.availableRooms);
-    setAvailableLecturers(alt.availableLecturers);
+    setAvailableRooms(alt.availableRooms || []);
+    setAvailableLecturers(alt.availableLecturers || []);
 
     //Reset lựa chọn phòng/GV cũ (vì đã đổi giờ, phòng cũ chưa chắc rảnh)
     formik.setFieldValue("roomId", "");
@@ -727,44 +736,135 @@ const CreateClassDialog: React.FC<Props> = ({ open, onClose, onSuccess }) => {
               {/* --- HIỂN THỊ KẾT QUẢ GỢI Ý (NẾU CONFLICT) --- */}
               {suggestionResult && suggestionResult.status === "CONFLICT" && (
                 <Grid size={{ xs: 12 }}>
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    <AlertTitle>Phát hiện xung đột!</AlertTitle>
-                    {suggestionResult.message}
-                    <Box mt={1}>
-                      {/* Hiển thị lý do xung đột phòng */}
-                      {suggestionResult.initialCheck.roomConflicts?.map(
-                        (c, i) => (
-                          <Typography
-                            key={`rc-${i}`}
-                            variant="caption"
-                            display="block"
-                            color="error"
-                          >
-                            {c.description}
-                          </Typography>
-                        )
-                      )}
-                      {/* Hiển thị lý do xung đột GV */}
-                      {suggestionResult.initialCheck.lecturerConflicts?.map(
-                        (c, i) => (
-                          <Typography
-                            key={`lc-${i}`}
-                            variant="caption"
-                            display="block"
-                            color="error"
-                          >
-                            {c.description}
-                          </Typography>
-                        )
-                      )}
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    <AlertTitle sx={{ fontWeight: 'bold', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <FontAwesomeIcon icon={faExclamationTriangle} /> Phát hiện xung đột lịch học
+                    </AlertTitle>
+                    <Typography variant="body2" sx={{ mb: 2 }}>
+                      {suggestionResult.message}
+                    </Typography>
+
+                    {/* Tóm tắt tình trạng */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      gap: 2, 
+                      mb: 2, 
+                      p: 1.5, 
+                      bgcolor: 'rgba(255,255,255,0.9)', 
+                      borderRadius: 1 
+                    }}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">Phòng khả dụng:</Typography>
+                        <Typography variant="h6" color="success.main" fontWeight="bold">
+                          {suggestionResult.initialCheck.availableRoomCount}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">Giảng viên khả dụng:</Typography>
+                        <Typography variant="h6" color="success.main" fontWeight="bold">
+                          {suggestionResult.initialCheck.availableLecturerCount}
+                        </Typography>
+                      </Box>
                     </Box>
+
+                    {/* Chi tiết xung đột phòng */}
+                    {suggestionResult.initialCheck.roomConflicts && 
+                     suggestionResult.initialCheck.roomConflicts.length > 0 && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="subtitle2" color="error.dark" fontWeight="bold" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <FontAwesomeIcon icon={faBan} /> Xung đột phòng học:
+                        </Typography>
+                        <Stack spacing={1}>
+                          {suggestionResult.initialCheck.roomConflicts.map((conflict, idx) => (
+                            <Paper 
+                              key={`room-${idx}`} 
+                              elevation={0}
+                              sx={{ 
+                                p: 1.5, 
+                                bgcolor: 'error.lighter',
+                                border: '1px solid',
+                                borderColor: 'error.light',
+                                borderRadius: 1
+                              }}
+                            >
+                              <Typography variant="body2" fontWeight="medium" sx={{ mb: 0.5 }}>
+                                {conflict.description}
+                              </Typography>
+                              {conflict.conflictingClassName && (
+                                <Typography variant="caption" display="block" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <FontAwesomeIcon icon={faBook} /> Lớp: <strong>{conflict.conflictingClassName}</strong>
+                                  {conflict.conflictingCourseName && ` - ${conflict.conflictingCourseName}`}
+                                </Typography>
+                              )}
+                              {conflict.conflictDate && (
+                                <Typography variant="caption" display="block" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <FontAwesomeIcon icon={faCalendar} /> {dayjs(conflict.conflictDate).format('DD/MM/YYYY')}
+                                  {conflict.conflictStartTime && conflict.conflictEndTime && (
+                                    <>
+                                      <FontAwesomeIcon icon={faClock} style={{ marginLeft: '8px' }} />
+                                      {` ${conflict.conflictStartTime} - ${conflict.conflictEndTime}`}
+                                    </>
+                                  )}
+                                </Typography>
+                              )}
+                            </Paper>
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
+
+                    {/* Chi tiết xung đột giảng viên */}
+                    {suggestionResult.initialCheck.lecturerConflicts && 
+                     suggestionResult.initialCheck.lecturerConflicts.length > 0 && (
+                      <Box>
+                        <Typography variant="subtitle2" color="warning.dark" fontWeight="bold" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <FontAwesomeIcon icon={faChalkboardTeacher} /> Xung đột giảng viên:
+                        </Typography>
+                        <Stack spacing={1}>
+                          {suggestionResult.initialCheck.lecturerConflicts.map((conflict, idx) => (
+                            <Paper 
+                              key={`lecturer-${idx}`} 
+                              elevation={0}
+                              sx={{ 
+                                p: 1.5, 
+                                bgcolor: 'warning.lighter',
+                                border: '1px solid',
+                                borderColor: 'warning.light',
+                                borderRadius: 1
+                              }}
+                            >
+                              <Typography variant="body2" fontWeight="medium" sx={{ mb: 0.5 }}>
+                                {conflict.description}
+                              </Typography>
+                              {conflict.conflictingClassName && (
+                                <Typography variant="caption" display="block" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <FontAwesomeIcon icon={faBook} /> Lớp: <strong>{conflict.conflictingClassName}</strong>
+                                  {conflict.conflictingCourseName && ` - ${conflict.conflictingCourseName}`}
+                                </Typography>
+                              )}
+                              {conflict.conflictDate && (
+                                <Typography variant="caption" display="block" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <FontAwesomeIcon icon={faCalendar} /> {dayjs(conflict.conflictDate).format('DD/MM/YYYY')}
+                                  {conflict.conflictStartTime && conflict.conflictEndTime && (
+                                    <>
+                                      <FontAwesomeIcon icon={faClock} style={{ marginLeft: '8px' }} />
+                                      {` ${conflict.conflictStartTime} - ${conflict.conflictEndTime}`}
+                                    </>
+                                  )}
+                                </Typography>
+                              )}
+                            </Paper>
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
                   </Alert>
 
                   <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
                     Gợi ý thay thế (Nhấn để áp dụng):
                   </Typography>
                   <Stack spacing={1} maxHeight={200} overflow="auto">
-                    {suggestionResult.alternatives.map((alt, index) => (
+                    {suggestionResult.alternatives?.map((alt, index) => (
                       <Card
                         key={index}
                         variant="outlined"

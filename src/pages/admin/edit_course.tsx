@@ -1,89 +1,126 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Thêm useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Box, Container, Typography, Tabs, Tab, Button, Paper, CircularProgress, Snackbar,
+    Box, Container, Typography, Tabs, Tab, Button, Paper, CircularProgress,
     Alert,
     Breadcrumbs,
     Link,
 } from '@mui/material';
 import { ModuleData } from '../../model/module_model';
-import { getCourseDetail, getModulesByCourseId } from '../../services/course_service';
+import { getCourseDetail } from '../../services/course_service';
 import EditCurriculum from '../../component/edit_curriculum';
 import EditCourseInfo from '../../component/edit_course_infor';
 import EditContentDetails from '../../component/edit_content_details';
-import { CourseDetails } from '../../model/course_model';
+import { CourseDetailResponse } from '../../model/course_model';
 
 const EditCourse: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
-    // State cho thông tin cơ bản của khóa học
-    const [courseBaseData, setCourseBaseData] = useState<Partial<CourseDetails>>({});
+    // State cho thông tin cơ bản của khóa học, sử dụng CourseDetailResponse
+    const [courseBaseData, setCourseBaseData] = useState<Partial<CourseDetailResponse>>({});
 
     // State riêng cho danh sách modules
     const [modules, setModules] = useState<ModuleData[]>([]);
+    const [skillModuleGroups, setSkillModuleGroups] = useState<import('../../model/course_model').SkillModuleGroup[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState(0);
+    const [hasOpenClasses, setHasOpenClasses] = useState(false);
 
     // Hàm fetch dữ liệu ban đầu
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (shouldShowLoading = true) => {
         if (!id) {
             setError("Không tìm thấy ID khóa học.");
             setLoading(false);
             return;
         }
-        setLoading(true);
+        if (shouldShowLoading) setLoading(true);
         setError(null);
         try {
             const courseIdNum = Number(id);
-            // Fetch song song
-            const [courseRes, modulesRes] = await Promise.all([
-                getCourseDetail(courseIdNum),
-                getModulesByCourseId(courseIdNum)
-            ]);
+            const courseRes = await getCourseDetail(courseIdNum);
+            const apiCourseData = courseRes.data.data as CourseDetailResponse;
+            console.log("image:", apiCourseData.image);
 
-            // Map dữ liệu Course từ API response vào state
-            const apiCourseData = courseRes.data.data;
-            setCourseBaseData({
-                tenkhoahoc: apiCourseData.courseName,
-                hocphi: apiCourseData.tuitionFee,
-                video: apiCourseData.video,
-                description: apiCourseData.description,
-                entryLevel: apiCourseData.entryLevel,
-                targetLevel: apiCourseData.targetLevel,
-                image: apiCourseData.image,
-                sogiohoc: apiCourseData.studyHours,
-                muctieu: apiCourseData.objectives?.map((o: any) => ({ tenmuctieu: o.objectiveName })) || [],
-            });
+            if (apiCourseData.classInfos && apiCourseData.classInfos.length > 0) {
+                setHasOpenClasses(true);
+            } else {
+                setHasOpenClasses(false);
+            }
 
-            // API getModules trả về trực tiếp mảng modules
-            setModules(modulesRes.data || []);
+            // Set dữ liệu Course từ API response vào state
+            setCourseBaseData(apiCourseData);
+
+            // Set skill module groups
+            if (apiCourseData.skillModules) {
+                setSkillModuleGroups(apiCourseData.skillModules);
+            } else {
+                setSkillModuleGroups([]);
+            }
+
+            // Flatten skillModules to ModuleData[]
+            const flattenedModules: ModuleData[] = [];
+            if (apiCourseData.skillModules) {
+                apiCourseData.skillModules.forEach(group => {
+                    if (group.modules) {
+                        group.modules.forEach(m => {
+                            flattenedModules.push({
+                                moduleId: m.moduleId,
+                                moduleName: m.moduleName,
+                                duration: m.duration || 0,
+                                skillId: group.skillId,
+                                contents: m.contents?.map((c: any) => ({
+                                    id: c.id,
+                                    contentName: c.contentName || c.contentDescription
+                                })) || [],
+                                documents: m.documents?.map((d: any) => ({
+                                    documentId: d.documentId,
+                                    fileName: d.fileName || d.documentTitle,
+                                    link: d.link || d.documentUrl,
+                                    description: d.description,
+                                    image: d.image
+                                })) || [],
+                                tailieu: [],
+                                noidung: []
+                            } as any);
+                        });
+                    }
+                });
+            }
+
+            const mappedModules = flattenedModules.map(m => ({
+                ...m,
+                tenmodule: m.moduleName,
+                thoiluong: m.duration,
+                noidung: m.contents ? m.contents.map((c: any) => ({ tennoidung: c.contentName })) : [],
+                tailieu: m.documents ? m.documents.map((d: any) => ({ tenfile: d.fileName, link: d.link, mota: d.description, hinh: d.image })) : []
+            }));
+
+            setModules(mappedModules as any);
 
         } catch (err: any) {
             console.error("Lỗi khi tải dữ liệu:", err);
-            const errorMsg = err.response?.data?.message || "Không thể tải dữ liệu khóa học hoặc modules.";
+            const errorMsg = err.response?.data?.message || "Không thể tải dữ liệu khóa học.";
             setError(errorMsg);
             setCourseBaseData({});
             setModules([]);
         } finally {
-            setLoading(false);
+            if (shouldShowLoading) setLoading(false);
         }
     }, [id]);
 
-    // Gọi fetchData khi component mount hoặc courseId thay đổi
     useEffect(() => {
         fetchData();
     }, [fetchData]);
-
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
     };
 
     // Hàm để các component con gọi khi có thay đổi cần fetch lại dữ liệu
     const handleDataNeedsRefresh = () => {
-        fetchData();
+        fetchData(false);
     };
 
     // ----- Render UI -----
@@ -97,7 +134,7 @@ const EditCourse: React.FC = () => {
     }
 
     // Kiểm tra xem dữ liệu cơ bản đã load chưa
-    if (!courseBaseData.tenkhoahoc) {
+    if (!courseBaseData.courseName) {
         return <Container><Typography sx={{ mt: 4 }}>Không tìm thấy dữ liệu khóa học.</Typography></Container>;
     }
 
@@ -116,7 +153,7 @@ const EditCourse: React.FC = () => {
 
             <Paper sx={{ p: 4, borderRadius: 4, mb: 4 }}>
                 <Typography variant="h4" gutterBottom>
-                    Chỉnh sửa Khóa học: {courseBaseData.tenkhoahoc}
+                    Chỉnh sửa Khóa học: {courseBaseData.courseName}
                 </Typography>
 
                 {/* Tabs */}
@@ -133,8 +170,10 @@ const EditCourse: React.FC = () => {
                     {activeTab === 0 &&
                         <EditCourseInfo
                             courseId={Number(id)}
-                            initialData={courseBaseData as CourseDetails}
+                            initialData={courseBaseData as CourseDetailResponse}
                             onSaveSuccess={handleDataNeedsRefresh}
+                            hasOpenClasses={hasOpenClasses}
+                            totalModuleDuration={modules.reduce((total, m) => total + m.duration, 0)}
                         />
                     }
                 </div>
@@ -143,9 +182,9 @@ const EditCourse: React.FC = () => {
                         <EditCurriculum
                             courseId={Number(id)}
                             initialModules={modules}
-                            objectives={courseBaseData.muctieu || []}
+                            skillModules={skillModuleGroups}
+                            objectives={courseBaseData.objectives || []}
                             onModulesChange={handleDataNeedsRefresh}
-                        // setDataObjectives={(newObjectives) => setCourseBaseData(prev => ({...prev, muctieu: newObjectives}))}
                         />
                     }
                 </div>

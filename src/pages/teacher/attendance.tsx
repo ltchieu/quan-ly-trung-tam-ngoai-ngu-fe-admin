@@ -44,7 +44,7 @@ import {
     getAttendanceBySessionId,
     saveAttendance,
 } from "../../services/class_service";
-import { ClassDetailResponse, SessionInfoDetail, AttendanceSessionRequest } from "../../model/class_model";
+import { ClassDetailResponse, SessionInfoDetail, AttendanceSessionRequest, AttendanceStatsResponse } from "../../model/class_model";
 import dayjs from "dayjs";
 
 const TeacherAttendance: React.FC = () => {
@@ -53,10 +53,22 @@ const TeacherAttendance: React.FC = () => {
     const [classDetail, setClassDetail] = useState<ClassDetailResponse | null>(null);
     const [sessions, setSessions] = useState<SessionInfoDetail[]>([]);
     const [selectedSessionId, setSelectedSessionId] = useState<string | number>("");
-    const [attendanceData, setAttendanceData] = useState<any[]>([]);
+
+    // Store local state with status: "PRESENT" | "ABSENT" | "LATE"
+    const [attendanceData, setAttendanceData] = useState<{
+        studentId: number;
+        fullName: string;
+        status: "PRESENT" | "ABSENT" | "LATE";
+        note: string;
+    }[]>([]);
+
     const [loading, setLoading] = useState<boolean>(true);
     const [saving, setSaving] = useState<boolean>(false);
     const [attendanceStatus, setAttendanceStatus] = useState<"Taken" | "Not Taken">("Not Taken");
+
+    // Stats state
+    const [stats, setStats] = useState<AttendanceStatsResponse | null>(null);
+
     const [notification, setNotification] = useState<{ open: boolean; message: string; severity: "success" | "error" | "warning" }>({
         open: false,
         message: "",
@@ -95,53 +107,49 @@ const TeacherAttendance: React.FC = () => {
     useEffect(() => {
         const fetchAttendance = async () => {
             if (selectedSessionId) {
+                setStats(null);
                 try {
-                    const data = await getAttendanceBySessionId(selectedSessionId);
-                    // Map API response to UI model
+                    const data = await getAttendanceBySessionId(Number(selectedSessionId));
                     if (data && data.entries && data.entries.length > 0) {
                         const mappedData = data.entries.map((entry) => ({
                             studentId: entry.studentId,
                             fullName: entry.studentName,
-                            isAbsent: entry.absent,
+                            status: entry.status,
                             note: entry.note
                         }));
                         setAttendanceData(mappedData);
                         setAttendanceStatus("Taken");
                     } else {
-                        // Fallback to class student list if no attendance data
-                        throw new Error("No attendance data");
+                        // No attendance data yet - initialize with student list
+                        if (classDetail && classDetail.students) {
+                            const defaultData = classDetail.students.map((student) => ({
+                                studentId: student.studentId,
+                                fullName: student.fullName,
+                                status: "PRESENT" as const,
+                                note: ""
+                            }));
+                            setAttendanceData(defaultData);
+                            setAttendanceStatus("Not Taken");
+                        } else {
+                            setAttendanceData([]);
+                            setAttendanceStatus("Not Taken");
+                        }
                     }
-                } catch (error) {
-                    console.log("Fetching attendance failed or empty, falling back to student list:", error);
-                    if (classDetail && classDetail.students) {
-                        const defaultData = classDetail.students.map((student) => ({
-                            studentId: student.studentId,
-                            fullName: student.fullName,
-                            isAbsent: false, // Default to Present
-                            note: ""
-                        }));
-                        setAttendanceData(defaultData);
-                        setAttendanceStatus("Not Taken");
-                    } else {
-                        setAttendanceData([]);
-                        setAttendanceStatus("Not Taken");
-                    }
+                } catch (error: any) {
+                    console.error("Error fetching attendance:", error);
+                    setAttendanceData([]);
+                    setAttendanceStatus("Not Taken");
+                    setNotification({
+                        open: true,
+                        message: error.message || "Lỗi khi tải danh sách điểm danh",
+                        severity: "error",
+                    });
                 }
 
-                // Check editability
+                // Check editability based on session status only
                 const session = sessions.find(s => s.sessionId === selectedSessionId);
                 if (session) {
-                    const today = dayjs().format("YYYY-MM-DD");
-                    const sessionDate = dayjs(session.date).format("YYYY-MM-DD");
-
-                    const isToday = sessionDate === today;
-                    const isCompleted = session.status === "Completed";
-
-                    if (isCompleted) {
-                        setIsEditable(false);
-                    } else {
-                        setIsEditable(isToday);
-                    }
+                    setIsEditable(session.status == "Completed");
                 }
             }
         };
@@ -149,11 +157,11 @@ const TeacherAttendance: React.FC = () => {
         fetchAttendance();
     }, [selectedSessionId, sessions, classDetail]);
 
-    const handleAttendanceChange = (studentId: number, isAbsent: boolean) => {
+    const handleAttendanceChange = (studentId: number, status: "PRESENT" | "ABSENT" | "LATE") => {
         if (!isEditable) return;
         setAttendanceData((prev) =>
             prev.map((item) =>
-                item.studentId === studentId ? { ...item, isAbsent: isAbsent } : item
+                item.studentId === studentId ? { ...item, status: status } : item
             )
         );
     };
@@ -175,11 +183,14 @@ const TeacherAttendance: React.FC = () => {
                 sessionId: Number(selectedSessionId),
                 entries: attendanceData.map(item => ({
                     studentId: item.studentId,
-                    absent: item.isAbsent,
+                    status: item.status,
                     note: item.note || ""
                 }))
             };
-            await saveAttendance(selectedSessionId, request);
+            console.log("attendance request", request);
+            const responseStats = await saveAttendance(selectedSessionId, request);
+
+            setStats(responseStats);
 
             setSessions(prev => prev.map(s => s.sessionId === selectedSessionId ? { ...s, status: 'Completed' } : s));
             setAttendanceStatus("Taken");
@@ -268,6 +279,44 @@ const TeacherAttendance: React.FC = () => {
                 </Stack>
             </Box>
 
+            {/* Statistics Section (Visible after save or if stats available - optional if needed on load) */}
+            {stats && (
+                <Grid container spacing={3} sx={{ mb: 4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <Typography variant="h6" color="text.secondary">Tổng số</Typography>
+                                <Typography variant="h4" fontWeight="bold">{stats.totalStudents}</Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ bgcolor: '#e8f5e9' }}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <Typography variant="h6" color="success.main">Có mặt</Typography>
+                                <Typography variant="h4" fontWeight="bold" color="success.main">{stats.presentCount}</Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ bgcolor: '#ffebee' }}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <Typography variant="h6" color="error.main">Vắng mặt</Typography>
+                                <Typography variant="h4" fontWeight="bold" color="error.main">{stats.absentCount}</Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ bgcolor: '#fff3e0' }}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <Typography variant="h6" color="warning.main">Đi muộn</Typography>
+                                <Typography variant="h4" fontWeight="bold" color="warning.main">{stats.lateCount}</Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                </Grid>
+            )}
+
             <Grid container spacing={3}>
                 {/* Session List */}
                 <Grid size={{ xs: 12, md: 4 }}>
@@ -296,6 +345,9 @@ const TeacherAttendance: React.FC = () => {
                                 {sessions.map((session) => {
                                     const isCompleted = session.status === 'Completed';
                                     const isSelected = session.sessionId === selectedSessionId;
+                                    const today = dayjs().format("YYYY-MM-DD");
+                                    const sessionDate = dayjs(session.date).format("YYYY-MM-DD");
+                                    const isToday = sessionDate === today;
 
                                     return (
                                         <React.Fragment key={session.sessionId}>
@@ -306,12 +358,20 @@ const TeacherAttendance: React.FC = () => {
                                                     sx={{
                                                         flexDirection: 'column',
                                                         alignItems: 'flex-start',
-                                                        py: 2
+                                                        py: 2,
+                                                        bgcolor: isToday ? 'info.lighter' : 'inherit',
+                                                        '&:hover': {
+                                                            bgcolor: isToday ? 'info.light' : 'action.hover',
+                                                        },
+                                                        ...(isToday && {
+                                                            boxShadow: 'inset 0 0 0 2px',
+                                                            boxShadowColor: 'info.main',
+                                                        })
                                                     }}
                                                 >
                                                     <Box sx={{ display: 'flex', width: '100%', justifyContent: 'space-between', mb: 1 }}>
                                                         <Typography variant="subtitle1" fontWeight="bold">
-                                                            Buổi {session.sessionId}
+                                                            Buổi {session.sessionId} {isToday && "📅"}
                                                         </Typography>
                                                         <Chip
                                                             label={isCompleted ? "Đã học" : "Chưa học"}
@@ -320,10 +380,10 @@ const TeacherAttendance: React.FC = () => {
                                                             variant={isCompleted ? "filled" : "outlined"}
                                                         />
                                                     </Box>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', color: isToday ? 'info.main' : 'text.secondary' }}>
                                                         <EventNote fontSize="small" sx={{ mr: 1 }} />
-                                                        <Typography variant="body2">
-                                                            {session.date}
+                                                        <Typography variant="body2" fontWeight={isToday ? "bold" : "normal"}>
+                                                            {session.date} {isToday && "(Hôm nay)"}
                                                         </Typography>
                                                     </Box>
                                                 </ListItemButton>
@@ -347,8 +407,8 @@ const TeacherAttendance: React.FC = () => {
                                 </Typography>
                                 {selectedSession && (
                                     <Chip
-                                        label={isEditable ? "Đang điểm danh" : (selectedSession.status === 'Completed' ? "Đã kết thúc" : "Chưa đến ngày học")}
-                                        color={isEditable ? "primary" : "default"}
+                                        label={isEditable ? "Có thể điểm danh hoặc chỉnh sửa điểm danh" : "Đã hoàn thành"}
+                                        color={isEditable ? "success" : "default"}
                                         variant="outlined"
                                     />
                                 )}
@@ -356,9 +416,7 @@ const TeacherAttendance: React.FC = () => {
 
                             {!isEditable && selectedSession && (
                                 <Alert severity="info" sx={{ mb: 3 }}>
-                                    {selectedSession.status === 'Completed'
-                                        ? "Buổi học này đã hoàn thành. Bạn không thể chỉnh sửa điểm danh."
-                                        : "Chỉ có thể điểm danh cho buổi học diễn ra trong ngày hôm nay."}
+                                    Chưa đến thời gian của buổi học này. Bạn không thể chỉnh sửa điểm danh.
                                 </Alert>
                             )}
 
@@ -390,26 +448,37 @@ const TeacherAttendance: React.FC = () => {
                                                 <TableCell align="center">
                                                     <Stack direction="row" spacing={1} justifyContent="center">
                                                         <Button
-                                                            variant={!item.isAbsent ? "contained" : "outlined"}
+                                                            variant={item.status === "PRESENT" ? "contained" : "outlined"}
                                                             color="success"
                                                             size="small"
-                                                            onClick={() => handleAttendanceChange(item.studentId, false)}
-                                                            startIcon={!item.isAbsent ? <CheckCircle /> : <CheckCircleOutline />}
+                                                            onClick={() => handleAttendanceChange(item.studentId, "PRESENT")}
+                                                            startIcon={item.status === "PRESENT" ? <CheckCircle /> : <CheckCircleOutline />}
                                                             disabled={!isEditable}
-                                                            sx={{ opacity: !isEditable && item.isAbsent ? 0.5 : 1 }}
+                                                            sx={{ opacity: !isEditable && item.status !== "PRESENT" ? 0.5 : 1 }}
                                                         >
                                                             Có mặt
                                                         </Button>
                                                         <Button
-                                                            variant={item.isAbsent ? "contained" : "outlined"}
+                                                            variant={item.status === "ABSENT" ? "contained" : "outlined"}
                                                             color="error"
                                                             size="small"
-                                                            onClick={() => handleAttendanceChange(item.studentId, true)}
-                                                            startIcon={item.isAbsent ? <Cancel /> : <RadioButtonUnchecked />}
+                                                            onClick={() => handleAttendanceChange(item.studentId, "ABSENT")}
+                                                            startIcon={item.status === "ABSENT" ? <Cancel /> : <RadioButtonUnchecked />}
                                                             disabled={!isEditable}
-                                                            sx={{ opacity: !isEditable && !item.isAbsent ? 0.5 : 1 }}
+                                                            sx={{ opacity: !isEditable && item.status !== "ABSENT" ? 0.5 : 1 }}
                                                         >
                                                             Vắng
+                                                        </Button>
+                                                        <Button
+                                                            variant={item.status === "LATE" ? "contained" : "outlined"}
+                                                            color="warning"
+                                                            size="small"
+                                                            onClick={() => handleAttendanceChange(item.studentId, "LATE")}
+                                                            startIcon={item.status === "LATE" ? <EventNote /> : <RadioButtonUnchecked />}
+                                                            disabled={!isEditable}
+                                                            sx={{ opacity: !isEditable && item.status !== "LATE" ? 0.5 : 1 }}
+                                                        >
+                                                            Muộn
                                                         </Button>
                                                     </Stack>
                                                 </TableCell>
@@ -446,9 +515,9 @@ const TeacherAttendance: React.FC = () => {
 
             <Snackbar
                 open={notification.open}
-                autoHideDuration={6000}
+                autoHideDuration={2000}
                 onClose={handleCloseNotification}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                anchorOrigin={{ vertical: "top", horizontal: "right" }}
             >
                 <Alert onClose={handleCloseNotification} severity={notification.severity as any} sx={{ width: "100%" }}>
                     {notification.message}
@@ -457,5 +526,4 @@ const TeacherAttendance: React.FC = () => {
         </Container>
     );
 };
-
 export default TeacherAttendance;

@@ -37,6 +37,7 @@ export function updateModule(
   moduleId: number,
   updateData: ModuleUpdateRequest
 ) {
+  console.log("Updating module:", moduleId, "Data:", updateData);
   return axiosClient.put(`/modules/${moduleId}`, updateData);
 }
 
@@ -95,6 +96,13 @@ export function createNewCourse(courseData: NewCourseState) {
 export function changeCourseStatus(courseId: number) {
   const url = `/courses/status/${courseId}`;
   return axiosClient.post(url);
+}
+
+// Cập nhật mục tiêu
+export function updateObjective(objectiveId: number, description: string) {
+  return axiosClient.put(`/courses/objectives/${objectiveId}`, {
+    objectiveName: description,
+  });
 }
 
 //Lấy danh sách các skills

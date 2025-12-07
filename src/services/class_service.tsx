@@ -9,6 +9,7 @@ import {
   RoomFilterData,
   AttendanceSessionResponse,
   AttendanceSessionRequest,
+  AttendanceStatsResponse,
 } from "../model/class_model";
 
 export function getAllClasses(page: number, size: number) {
@@ -166,12 +167,13 @@ export const getClassesEnrolled = async (page: number, size: number) => {
   }
 };
 
-export const getAttendanceBySessionId = async (sessionId: number | string) => {
+export const getAttendanceBySessionId = async (sessionId: number) => {
   try {
     const response = await axiosClient.get<ApiResponse<AttendanceSessionResponse>>(`/courseclasses/sessions/${sessionId}/attendance`, {
       withCredentials: true
     });
     if (response.data && response.data.code === 1000 && response.data.data) {
+      console.log("Danh sách điểm danh", response.data.data);
       return response.data.data;
     } else {
       throw new Error(response.data?.message || "Lấy danh sách điểm danh thất bại");
@@ -188,8 +190,10 @@ export const saveAttendance = async (sessionId: number | string, request: Attend
     const response = await axiosClient.post<ApiResponse<AttendanceSessionResponse>>(`/lecturers/sessions/${sessionId}/attendance`, request, {
       withCredentials: true
     });
-    if (response.data && response.data.code === 1000 && response.data.data) {
-      return response.data.data;
+    const statsResponse = response as unknown as { data: ApiResponse<AttendanceStatsResponse> };
+
+    if (statsResponse.data && statsResponse.data.code === 1000 && statsResponse.data.data) {
+      return statsResponse.data.data;
     } else {
       throw new Error(response.data?.message || "Lưu điểm danh thất bại");
     }

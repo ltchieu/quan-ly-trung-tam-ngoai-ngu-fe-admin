@@ -18,7 +18,15 @@ import {
   Autocomplete,
   CircularProgress,
   Alert,
+  Chip,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Snackbar,
 } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate } from "react-router-dom";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -26,28 +34,35 @@ import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 
-import { LoaiKhuyenMai } from "../../model/promotion_model";
-import { createPromotion, getAllPromotionTypes } from "../../services/promotion_service";
+import { createPromotion } from "../../services/promotion_service";
+import { PromotionRequest } from "../../model/promotion_model";
 import { getCourseFilterList } from "../../services/class_service";
 import { CourseFilterData } from "../../model/class_model";
+
+// Hardcoded promotion types matching backend
+const PROMOTION_TYPES = [
+  { id: 1, name: "Khuyến mãi học lẻ" },
+  { id: 2, name: "Khuyến mãi combo" },
+  { id: 3, name: "Khuyến mãi học viên cũ" },
+];
 
 const AddPromotionPage: React.FC = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<CourseFilterData[]>([]);
-  const [promotionTypes, setPromotionTypes] = useState<LoaiKhuyenMai[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({ open: false, message: "", severity: "success" });
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [courseData, typeData] = await Promise.all([
-          getCourseFilterList(),
-          getAllPromotionTypes(),
-        ]);
+        const courseData = await getCourseFilterList();
         setCourses(courseData);
-        setPromotionTypes(typeData);
       } catch (error) {
         console.error("Failed to fetch data", error);
       } finally {
@@ -59,64 +74,70 @@ const AddPromotionPage: React.FC = () => {
 
   const formik = useFormik({
     initialValues: {
-      tenKhuyenMai: "",
-      maLoaiKhuyenMai: "" as unknown as number,
-      moTa: "",
-      ngayBatDau: dayjs(),
-      ngayKetThuc: dayjs().add(1, "month"),
-      phanTramGiam: 0,
+      name: "",
+      promotionTypeId: "" as unknown as number,
+      description: "",
+      startDate: dayjs(),
+      endDate: dayjs().add(1, "month"),
+      discountPercent: 0,
       courseIds: [] as number[],
-      selectedCourseId: "", // For single course selection
     },
     validationSchema: Yup.object({
-      tenKhuyenMai: Yup.string().required("Vui lòng nhập tên chương trình"),
-      maLoaiKhuyenMai: Yup.number().required("Vui lòng chọn loại khuyến mãi"),
-      ngayBatDau: Yup.date().required("Vui lòng chọn ngày bắt đầu"),
-      ngayKetThuc: Yup.date()
+      name: Yup.string().required("Vui lòng nhập tên chương trình"),
+      promotionTypeId: Yup.number().required("Vui lòng chọn loại khuyến mãi"),
+      startDate: Yup.date()
+        .required("Vui lòng chọn ngày bắt đầu")
+        .min(dayjs().startOf('day').toDate(), "Ngày bắt đầu phải từ hôm nay trở đi"),
+      endDate: Yup.date()
         .required("Vui lòng chọn ngày kết thúc")
-        .min(Yup.ref("ngayBatDau"), "Ngày kết thúc phải sau ngày bắt đầu"),
-      phanTramGiam: Yup.number()
+        .min(Yup.ref("startDate"), "Ngày kết thúc phải sau ngày bắt đầu"),
+      discountPercent: Yup.number()
         .min(0, "Không được nhỏ hơn 0")
         .max(100, "Không được lớn hơn 100")
         .required("Vui lòng nhập mức giảm giá"),
-      // Conditional validation based on type (Assuming ID 1 is Combo, 3 is Course Discount)
-      courseIds: Yup.array().when("maLoaiKhuyenMai", {
-        is: 1, // Combo
+      courseIds: Yup.array().when("promotionTypeId", {
+        is: 1, // Course Discount - single or multiple courses
+        then: (schema) => schema.min(1, "Vui lòng chọn ít nhất 1 khóa học"),
+      }).when("promotionTypeId", {
+        is: 2, // Combo - requires at least 2 courses
         then: (schema) => schema.min(2, "Vui lòng chọn ít nhất 2 khóa học"),
-        otherwise: (schema) => schema.notRequired(),
-      }),
-      selectedCourseId: Yup.string().when("maLoaiKhuyenMai", {
-        is: 3, // Course Discount
-        then: (schema) => schema.required("Vui lòng chọn khóa học"),
-        otherwise: (schema) => schema.notRequired(),
       }),
     }),
     onSubmit: async (values) => {
       setIsSubmitting(true);
       try {
-        const payload: any = {
-          tenKhuyenMai: values.tenKhuyenMai,
-          maLoaiKhuyenMai: Number(values.maLoaiKhuyenMai),
-          moTa: values.moTa,
-          ngayBatDau: values.ngayBatDau.format("YYYY-MM-DD"),
-          ngayKetThuc: values.ngayKetThuc.format("YYYY-MM-DD"),
-          trangThai: true,
-          phanTramGiam: Number(values.phanTramGiam),
-          chiTietKhuyenMai: [],
+        let courseIds: number[] | undefined = undefined;
+
+        if (values.promotionTypeId === 1 || values.promotionTypeId === 2) {
+          // Type 1 (Course Discount) and Type 2 (Combo) use courseIds
+          courseIds = values.courseIds;
+        }
+        // For promotionTypeId === 3 (Student Loyalty), courseIds remains undefined
+
+        const request: PromotionRequest = {
+          name: values.name,
+          promotionTypeId: Number(values.promotionTypeId),
+          description: values.description || undefined,
+          startDate: values.startDate.format("YYYY-MM-DD"),
+          endDate: values.endDate.format("YYYY-MM-DD"),
+          discountPercent: Number(values.discountPercent),
+          courseIds: courseIds,
         };
 
-        if (values.maLoaiKhuyenMai === 1) { // Combo
-          payload.chiTietKhuyenMai = values.courseIds.map(id => ({ maKhoaHoc: id }));
-        } else if (values.maLoaiKhuyenMai === 3) { // Course Discount
-          payload.chiTietKhuyenMai = [{ maKhoaHoc: Number(values.selectedCourseId) }];
-        }
-
-        await createPromotion(payload);
-        alert("Tạo khuyến mãi thành công!");
-        navigate("/promotions");
-      } catch (error) {
+        await createPromotion(request);
+        setSnackbar({
+          open: true,
+          message: "Tạo khuyến mãi thành công!",
+          severity: "success",
+        });
+        setTimeout(() => navigate("/promotions"), 2000);
+      } catch (error: any) {
         console.error("Failed to create promotion", error);
-        alert("Có lỗi xảy ra khi tạo khuyến mãi.");
+        setSnackbar({
+          open: true,
+          message: error.message || "Có lỗi xảy ra khi tạo khuyến mãi.",
+          severity: "error",
+        });
       } finally {
         setIsSubmitting(false);
       }
@@ -153,24 +174,24 @@ const AddPromotionPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Tên chương trình"
-                    name="tenKhuyenMai"
-                    value={formik.values.tenKhuyenMai}
+                    name="name"
+                    value={formik.values.name}
                     onChange={formik.handleChange}
-                    error={formik.touched.tenKhuyenMai && Boolean(formik.errors.tenKhuyenMai)}
-                    helperText={formik.touched.tenKhuyenMai && formik.errors.tenKhuyenMai}
+                    error={formik.touched.name && Boolean(formik.errors.name)}
+                    helperText={formik.touched.name && formik.errors.name}
                   />
 
                   <FormControl fullWidth>
                     <InputLabel>Loại khuyến mãi</InputLabel>
                     <Select
-                      name="maLoaiKhuyenMai"
-                      value={formik.values.maLoaiKhuyenMai}
+                      name="promotionTypeId"
+                      value={formik.values.promotionTypeId}
                       label="Loại khuyến mãi"
                       onChange={formik.handleChange}
                     >
-                      {promotionTypes.map((type) => (
-                        <MenuItem key={type.ma} value={type.ma}>
-                          {type.ten}
+                      {PROMOTION_TYPES.map((type) => (
+                        <MenuItem key={type.id} value={type.id}>
+                          {type.name}
                         </MenuItem>
                       ))}
                     </Select>
@@ -181,41 +202,43 @@ const AddPromotionPage: React.FC = () => {
                     multiline
                     rows={3}
                     label="Mô tả"
-                    name="moTa"
-                    value={formik.values.moTa}
+                    name="description"
+                    value={formik.values.description}
                     onChange={formik.handleChange}
                   />
 
                   <Stack direction="row" spacing={2}>
                     <DatePicker
                       label="Ngày bắt đầu"
-                      value={formik.values.ngayBatDau}
-                      onChange={(val) => formik.setFieldValue("ngayBatDau", val)}
+                      value={formik.values.startDate}
+                      onChange={(val) => formik.setFieldValue("startDate", val)}
+                      minDate={dayjs()}
                       slotProps={{
                         textField: {
                           fullWidth: true,
                           error:
-                            formik.touched.ngayBatDau &&
-                            Boolean(formik.errors.ngayBatDau),
+                            formik.touched.startDate &&
+                            Boolean(formik.errors.startDate),
                           helperText:
-                            formik.touched.ngayBatDau &&
-                            (formik.errors.ngayBatDau as string),
+                            formik.touched.startDate &&
+                            (formik.errors.startDate as string),
                         },
                       }}
                     />
                     <DatePicker
                       label="Ngày kết thúc"
-                      value={formik.values.ngayKetThuc}
-                      onChange={(val) => formik.setFieldValue("ngayKetThuc", val)}
+                      value={formik.values.endDate}
+                      onChange={(val) => formik.setFieldValue("endDate", val)}
+                      minDate={formik.values.startDate.add(1, 'day')}
                       slotProps={{
                         textField: {
                           fullWidth: true,
                           error:
-                            formik.touched.ngayKetThuc &&
-                            Boolean(formik.errors.ngayKetThuc),
+                            formik.touched.endDate &&
+                            Boolean(formik.errors.endDate),
                           helperText:
-                            formik.touched.ngayKetThuc &&
-                            (formik.errors.ngayKetThuc as string),
+                            formik.touched.endDate &&
+                            (formik.errors.endDate as string),
                         },
                       }}
                     />
@@ -234,25 +257,115 @@ const AddPromotionPage: React.FC = () => {
                     fullWidth
                     type="number"
                     label="Mức giảm giá (%)"
-                    name="phanTramGiam"
-                    value={formik.values.phanTramGiam}
+                    name="discountPercent"
+                    value={formik.values.discountPercent}
                     onChange={formik.handleChange}
                     error={
-                      formik.touched.phanTramGiam &&
-                      Boolean(formik.errors.phanTramGiam)
+                      formik.touched.discountPercent &&
+                      Boolean(formik.errors.discountPercent)
                     }
                     helperText={
-                      formik.touched.phanTramGiam &&
-                      formik.errors.phanTramGiam
+                      formik.touched.discountPercent &&
+                      formik.errors.discountPercent
                     }
                     InputProps={{ inputProps: { min: 0, max: 100 } }}
                   />
 
-                  {/* COMBO: Multi-select Courses */}
-                  {formik.values.maLoaiKhuyenMai === 1 && (
+                  {/* COURSE_DISCOUNT: Multi-select Courses for individual discount */}
+                  {formik.values.promotionTypeId === 1 && (
                     <Box>
                       <Alert severity="info" sx={{ mb: 2 }}>
-                        Chọn các khóa học áp dụng trong Combo này.
+                        Chọn các khóa học áp dụng khuyến mãi học lẻ.
+                      </Alert>
+                      <Autocomplete
+                        multiple
+                        options={courses}
+                        getOptionLabel={(option) => option.courseName}
+                        value={courses.filter((c) =>
+                          formik.values.courseIds.includes(c.courseId)
+                        )}
+                        onChange={(_, newValue) => {
+                          formik.setFieldValue(
+                            "courseIds",
+                            newValue.map((c) => c.courseId)
+                          );
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Chọn khóa học khuyến mãi học lẻ"
+                            placeholder="Thêm khóa học"
+                            error={
+                              formik.touched.courseIds &&
+                              Boolean(formik.errors.courseIds)
+                            }
+                            helperText={
+                              formik.touched.courseIds &&
+                              formik.errors.courseIds
+                            }
+                          />
+                        )}
+                      />
+
+                      {/* Display selected courses as a list for Type 1 */}
+                      {formik.values.courseIds.length > 0 && (
+                        <Card variant="outlined" sx={{ mt: 2 }}>
+                          <CardContent>
+                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                              Khóa học đã chọn ({formik.values.courseIds.length})
+                            </Typography>
+                            <List dense>
+                              {formik.values.courseIds.map((courseId) => {
+                                const course = courses.find(
+                                  (c) => c.courseId === courseId
+                                );
+                                return (
+                                  <ListItem
+                                    key={courseId}
+                                    sx={{
+                                      border: "1px solid",
+                                      borderColor: "divider",
+                                      borderRadius: 1,
+                                      mb: 1,
+                                    }}
+                                  >
+                                    <ListItemText
+                                      primary={course?.courseName || "Unknown"}
+                                      secondary={`ID: ${courseId}`}
+                                    />
+                                    <ListItemSecondaryAction>
+                                      <IconButton
+                                        edge="end"
+                                        aria-label="delete"
+                                        onClick={() => {
+                                          formik.setFieldValue(
+                                            "courseIds",
+                                            formik.values.courseIds.filter(
+                                              (id) => id !== courseId
+                                            )
+                                          );
+                                        }}
+                                        color="error"
+                                        size="small"
+                                      >
+                                        <DeleteIcon />
+                                      </IconButton>
+                                    </ListItemSecondaryAction>
+                                  </ListItem>
+                                );
+                              })}
+                            </List>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* COMBO: Multiple Select Courses */}
+                  {formik.values.promotionTypeId === 2 && (
+                    <Box>
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        Chọn các khóa học trong Combo (tối thiểu 2 khóa học).
                       </Alert>
                       <Autocomplete
                         multiple
@@ -283,48 +396,63 @@ const AddPromotionPage: React.FC = () => {
                           />
                         )}
                       />
-                    </Box>
-                  )}
 
-                  {/* COURSE_DISCOUNT: Single Select Course */}
-                  {formik.values.maLoaiKhuyenMai === 3 && (
-                    <Box>
-                      <Alert severity="info" sx={{ mb: 2 }}>
-                        Chọn khóa học được giảm giá.
-                      </Alert>
-                      <FormControl fullWidth>
-                        <InputLabel>Khóa học áp dụng</InputLabel>
-                        <Select
-                          name="selectedCourseId"
-                          value={formik.values.selectedCourseId}
-                          label="Khóa học áp dụng"
-                          onChange={formik.handleChange}
-                          error={
-                            formik.touched.selectedCourseId &&
-                            Boolean(formik.errors.selectedCourseId)
-                          }
-                        >
-                          {courses.map((course) => (
-                            <MenuItem
-                              key={course.courseId}
-                              value={course.courseId}
-                            >
-                              {course.courseName}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                        {formik.touched.selectedCourseId &&
-                          formik.errors.selectedCourseId && (
-                            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
-                              {formik.errors.selectedCourseId}
+                      {/* Display selected courses as a list */}
+                      {formik.values.courseIds.length > 0 && (
+                        <Card variant="outlined" sx={{ mt: 2 }}>
+                          <CardContent>
+                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                              Các khóa học trong Combo ({formik.values.courseIds.length})
                             </Typography>
-                          )}
-                      </FormControl>
+                            <List dense>
+                              {formik.values.courseIds.map((courseId) => {
+                                const course = courses.find(
+                                  (c) => c.courseId === courseId
+                                );
+                                return (
+                                  <ListItem
+                                    key={courseId}
+                                    sx={{
+                                      border: "1px solid",
+                                      borderColor: "divider",
+                                      borderRadius: 1,
+                                      mb: 1,
+                                    }}
+                                  >
+                                    <ListItemText
+                                      primary={course?.courseName || "Unknown"}
+                                      secondary={`ID: ${courseId}`}
+                                    />
+                                    <ListItemSecondaryAction>
+                                      <IconButton
+                                        edge="end"
+                                        aria-label="delete"
+                                        onClick={() => {
+                                          formik.setFieldValue(
+                                            "courseIds",
+                                            formik.values.courseIds.filter(
+                                              (id) => id !== courseId
+                                            )
+                                          );
+                                        }}
+                                        color="error"
+                                        size="small"
+                                      >
+                                        <DeleteIcon />
+                                      </IconButton>
+                                    </ListItemSecondaryAction>
+                                  </ListItem>
+                                );
+                              })}
+                            </List>
+                          </CardContent>
+                        </Card>
+                      )}
                     </Box>
                   )}
 
                   {/* STUDENT_LOYALTY: Info only */}
-                  {formik.values.maLoaiKhuyenMai === 2 && (
+                  {formik.values.promotionTypeId === 3 && (
                     <Alert severity="info">
                       Áp dụng tự động cho tất cả học viên đã từng đăng ký khóa học
                       tại trung tâm.
@@ -361,6 +489,21 @@ const AddPromotionPage: React.FC = () => {
             </Grid>
           </Grid>
         </form>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={2000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <Alert
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            severity={snackbar.severity}
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Container>
     </LocalizationProvider>
   );

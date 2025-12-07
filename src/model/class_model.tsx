@@ -96,11 +96,21 @@ export interface ClassResponse {
   classes: ClassInfo[];
 }
 
+export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
+
 export interface AttendanceEntryResponse {
   studentId: number;
   studentName: string;
-  absent: boolean;
+  status: AttendanceStatus;
   note: string;
+}
+
+export interface AttendanceStatsResponse {
+  sessionId: number;
+  totalStudents: number;
+  presentCount: number;
+  absentCount: number;
+  lateCount: number;
 }
 
 export interface AttendanceSessionResponse {
@@ -110,7 +120,7 @@ export interface AttendanceSessionResponse {
 
 export interface AttendanceEntryRequest {
   studentId: number;
-  absent: boolean;
+  status: AttendanceStatus;
   note: string;
 }
 

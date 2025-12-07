@@ -12,9 +12,6 @@ export const getTeacherInfoById = async (id?: number | string): Promise<TeacherI
     } else if (role?.toUpperCase() === "ADMIN" && id) {
       url = `/lecturers/${id}`;
     } else {
-      // Default or fallback if needed, or throw error if neither matches expectations
-      // For now, let's assume if ID is provided we try to fetch by ID, otherwise me?
-      // But the requirement is specific.
       if (id) url = `/lecturers/${id}`;
       else url = "/lecturers/me";
     }

@@ -20,9 +20,13 @@ import {
   Divider,
   CircularProgress,
   Alert,
+  IconButton,
+  Snackbar
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import InputFileUpload from "./button_upload_file";
 import { updateModule } from "../services/course_service";
 import { getImageUrl } from "../services/file_service";
@@ -31,7 +35,7 @@ import {
   DocumentDataForModule,
   ModuleData,
 } from "../model/module_model";
-import { ModuleUpdateRequest } from "../model/course_model";
+import { ActionEnum, ModuleUpdateRequest } from "../model/course_model";
 
 interface Props {
   modules: ModuleData[];
@@ -80,9 +84,33 @@ const EditContentDetails: React.FC<Props> = ({
   const [saveError, setSaveError] = useState<{ [key: number]: string | null }>(
     {}
   );
+  const [saveSuccess, setSaveSuccess] = useState<{ [key: number]: string | null }>(
+    {}
+  );
+
+  // Tracking deleted and modified items per module
+  const [deletedContents, setDeletedContents] = useState<{ [moduleId: number]: Set<number> }>({});
+  const [deletedDocuments, setDeletedDocuments] = useState<{ [moduleId: number]: Set<number> }>({});
+  const [modifiedContents, setModifiedContents] = useState<{ [moduleId: number]: Set<number> }>({});
+  const [modifiedDocuments, setModifiedDocuments] = useState<{ [moduleId: number]: Set<number> }>({});
+  const [notification, setNotification] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
 
   useEffect(() => {
     setModules(initialModules);
+    // Reset tracking when data is refreshed from parent
+    setDeletedContents({});
+    setDeletedDocuments({});
+    setModifiedContents({});
+    setModifiedDocuments({});
   }, [initialModules]);
 
   // --- Handlers ---
@@ -135,11 +163,19 @@ const EditContentDetails: React.FC<Props> = ({
     const { moduleIndex, contentIndex, contentName } = editingContent;
     const newModules = modules.map((mod, mIndex) => {
       if (mIndex === moduleIndex) {
-        const updatedContents = (mod.contents || []).map((content, cIndex) =>
-          cIndex === contentIndex
-            ? { ...content, contentName: contentName }
-            : content
-        );
+        const updatedContents = (mod.contents || []).map((content, cIndex) => {
+          if (cIndex === contentIndex) {
+            // Track modification if ID > 0
+            if (content.id > 0) {
+              setModifiedContents(prev => ({
+                ...prev,
+                [mod.moduleId]: new Set(prev[mod.moduleId]).add(content.id)
+              }));
+            }
+            return { ...content, contentName: contentName };
+          }
+          return content;
+        });
         return { ...mod, contents: updatedContents };
       }
       return mod;
@@ -151,6 +187,13 @@ const EditContentDetails: React.FC<Props> = ({
   const handleRemoveContent = (moduleIndex: number, contentIndex: number) => {
     const updatedModules = modules.map((mod, index) => {
       if (index === moduleIndex) {
+        const contentToRemove = (mod.contents || [])[contentIndex];
+        if (contentToRemove.id > 0) {
+          setDeletedContents(prev => ({
+            ...prev,
+            [mod.moduleId]: new Set(prev[mod.moduleId]).add(contentToRemove.id)
+          }));
+        }
         return {
           ...mod,
           contents: (mod.contents || []).filter((_, i) => i !== contentIndex),
@@ -161,7 +204,7 @@ const EditContentDetails: React.FC<Props> = ({
     setModules(updatedModules);
   };
 
-  // --- Document Handlers (Modify local 'modules' state + Dialogs) ---
+  // --- Document Handlers ---
   const handleDocInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setDocFormData((prev) => ({ ...prev, [name]: value }));
@@ -185,16 +228,15 @@ const EditContentDetails: React.FC<Props> = ({
     docIndex: number,
     doc: DocumentDataForModule
   ) => {
-    setEditingDocument({ ...doc, docIndex }); // Set editing state
+    setEditingDocument({ ...doc, docIndex });
     setDocFormData({
-      // Pre-fill form
       tenfile: doc.fileName,
       link: doc.link,
       mota: doc.description,
       hinh: doc.image,
     });
     setImgPreviewUrl(doc.image ? getImageUrl(doc.image) : null);
-    setCurrentDocModuleIndex(moduleIndex); // Remember context
+    setCurrentDocModuleIndex(moduleIndex);
     setDocDialogOpen(true);
   };
 
@@ -211,10 +253,9 @@ const EditContentDetails: React.FC<Props> = ({
     const updatedModules = modules.map((mod, index) => {
       if (index === currentDocModuleIndex) {
         const newOrUpdatedDoc = {
-          // Map form state to ModuleData structure
           documentId: editingDocument
             ? editingDocument.documentId
-            : Date.now() * -1, // Use existing ID or temp ID
+            : Date.now() * -1,
           fileName: docFormData.tenfile,
           link: docFormData.link,
           description: docFormData.mota,
@@ -222,12 +263,18 @@ const EditContentDetails: React.FC<Props> = ({
         };
         let updatedDocs;
         if (editingDocument) {
-          // If editing
+          // Editing
           updatedDocs = (mod.documents || []).map((doc, i) =>
             i === editingDocument.docIndex ? newOrUpdatedDoc : doc
           );
+          if (editingDocument.documentId > 0) {
+            setModifiedDocuments(prev => ({
+              ...prev,
+              [mod.moduleId]: new Set(prev[mod.moduleId]).add(editingDocument.documentId)
+            }));
+          }
         } else {
-          // If adding
+          // Adding
           updatedDocs = [...(mod.documents || []), newOrUpdatedDoc];
         }
         return { ...mod, documents: updatedDocs };
@@ -241,6 +288,13 @@ const EditContentDetails: React.FC<Props> = ({
   const handleRemoveDocument = (moduleIndex: number, docIndex: number) => {
     const updatedModules = modules.map((mod, index) => {
       if (index === moduleIndex) {
+        const docToRemove = (mod.documents || [])[docIndex];
+        if (docToRemove.documentId > 0) {
+          setDeletedDocuments(prev => ({
+            ...prev,
+            [mod.moduleId]: new Set(prev[mod.moduleId]).add(docToRemove.documentId)
+          }));
+        }
         return {
           ...mod,
           documents: (mod.documents || []).filter((_, i) => i !== docIndex),
@@ -258,24 +312,74 @@ const EditContentDetails: React.FC<Props> = ({
 
     setSavingModuleId(moduleToSave.moduleId);
     setSaveError((prev) => ({ ...prev, [moduleToSave.moduleId]: null }));
+    setSaveSuccess((prev) => ({ ...prev, [moduleToSave.moduleId]: null }));
 
     try {
+      const contentUpdates = (moduleToSave.contents || []).map((c) => {
+        if (c.id < 0) {
+          return { contentName: c.contentName, action: ActionEnum.CREATE };
+        } else if (modifiedContents[moduleToSave.moduleId]?.has(c.id)) {
+          return { id: c.id, contentName: c.contentName, action: ActionEnum.UPDATE };
+        }
+        return null;
+      }).filter(x => x !== null) as any[];
+
+      // Add deleted contents
+      if (deletedContents[moduleToSave.moduleId]) {
+        deletedContents[moduleToSave.moduleId].forEach(id => {
+          contentUpdates.push({ id: id, action: ActionEnum.DELETE });
+        });
+      }
+
+      const documentUpdates = (moduleToSave.documents || []).map((d) => {
+        if (d.documentId < 0) {
+          return {
+            fileName: d.fileName,
+            link: d.link,
+            description: d.description,
+            image: d.image || "",
+            action: ActionEnum.CREATE
+          };
+        } else if (modifiedDocuments[moduleToSave.moduleId]?.has(d.documentId)) {
+          return {
+            id: d.documentId,
+            fileName: d.fileName,
+            link: d.link,
+            description: d.description,
+            image: d.image || "",
+            action: ActionEnum.UPDATE
+          };
+        }
+        return null;
+      }).filter(x => x !== null) as any[];
+
+      // Add deleted documents
+      if (deletedDocuments[moduleToSave.moduleId]) {
+        deletedDocuments[moduleToSave.moduleId].forEach(id => {
+          documentUpdates.push({ id: id, action: ActionEnum.DELETE });
+        });
+      }
+
       const updateRequest: ModuleUpdateRequest = {
-        moduleName: moduleToSave.moduleName,
-        duration: moduleToSave.duration,
-        contents: (moduleToSave.contents || []).map((c) => ({
-          id: c.id,
-          contentName: c.contentName,
-        })),
-        documents: (moduleToSave.documents || []).map((d) => ({
-          fileName: d.fileName,
-          link: d.link,
-          description: d.description,
-          image: d.image || "",
-        })),
+        // moduleName: moduleToSave.moduleName, // Removing moduleName update from here as per Requirement, or keep it?
+        // Requirement says "Target and Program tab... allows updating module name... Detailed content tab allows updating more or the content".
+        // It doesn't explicitly FORBID sending moduleName here, but it's cleaner to just send contents/docs.
+        // However, the API might require moduleName? Let's assume it's optional in DTO.
+        // If I don't send it, logic in backend might be fine.
+        contents: contentUpdates,
+        documents: documentUpdates,
       };
 
       await updateModule(moduleToSave.moduleId, updateRequest);
+      setSaveSuccess((prev) => ({ ...prev, [moduleToSave.moduleId]: "Cập nhật thành công!" }));
+      setNotification({ open: true, message: "Cập nhật thành công!", severity: 'success' });
+
+      // Clear tracking for this module
+      setDeletedContents(prev => { const n = { ...prev }; delete n[moduleToSave.moduleId]; return n; });
+      setDeletedDocuments(prev => { const n = { ...prev }; delete n[moduleToSave.moduleId]; return n; });
+      setModifiedContents(prev => { const n = { ...prev }; delete n[moduleToSave.moduleId]; return n; });
+      setModifiedDocuments(prev => { const n = { ...prev }; delete n[moduleToSave.moduleId]; return n; });
+
       onModulesChange();
     } catch (err: any) {
       console.error(`Lỗi khi lưu module ${moduleToSave.moduleId}:`, err);
@@ -310,7 +414,6 @@ const EditContentDetails: React.FC<Props> = ({
               sx={{ mb: 1 }}
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                {/* ... Accordion Summary (Module Name, Duration) ... */}
                 <Typography fontWeight="bold">{`Module ${moduleIndex + 1}: ${module.moduleName
                   }`}</Typography>
                 {module.duration > 0 && (
@@ -333,6 +436,15 @@ const EditContentDetails: React.FC<Props> = ({
                     pb: 2,
                   }}
                 >
+                  {saveSuccess[module.moduleId] && (
+                    <Alert
+                      severity="success"
+                      sx={{ flexGrow: 1, mr: 1 }}
+                      onClose={() => setSaveSuccess((prev) => ({ ...prev, [module.moduleId]: null }))}
+                    >
+                      {saveSuccess[module.moduleId]}
+                    </Alert>
+                  )}
                   {saveError[module.moduleId] && (
                     <Alert
                       severity="error"
@@ -430,10 +542,19 @@ const EditContentDetails: React.FC<Props> = ({
                         <ListItem
                           key={content.id || contentIndex}
                           disableGutters
+                          secondaryAction={
+                            <>
+                              <IconButton edge="end" aria-label="edit" onClick={() => handleOpenEditContentDialog(moduleIndex, contentIndex, content)}>
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton edge="end" aria-label="delete" onClick={() => handleRemoveContent(moduleIndex, contentIndex)}>
+                                <DeleteIcon />
+                              </IconButton>
+                            </>
+                          }
                         >
                           <ListItemText
-                            primary={content.id}
-                            secondary={content.contentName}
+                            primary={content.contentName}
                           />
                         </ListItem>
                       ))}
@@ -468,7 +589,17 @@ const EditContentDetails: React.FC<Props> = ({
                       {(module.documents || []).map((doc, docIndex) => (
                         <ListItem
                           key={doc.documentId || docIndex}
-                          disableGutters /* ... secondaryAction with Edit/Delete buttons calling handlers ... */
+                          disableGutters
+                          secondaryAction={
+                            <>
+                              <IconButton edge="end" aria-label="edit" onClick={() => handleOpenEditDocDialog(moduleIndex, docIndex, doc)}>
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton edge="end" aria-label="delete" onClick={() => handleRemoveDocument(moduleIndex, docIndex)}>
+                                <DeleteIcon />
+                              </IconButton>
+                            </>
+                          }
                         >
                           <ListItemText
                             primary={doc.fileName}
@@ -476,12 +607,16 @@ const EditContentDetails: React.FC<Props> = ({
                           />
                           {doc.image && (
                             <img
-                              src={getImageUrl(doc.image)} /* ... style ... */
+                              src={getImageUrl(doc.image)}
+                              alt="preview"
+                              style={{ width: 50, height: 50, objectFit: 'cover', marginLeft: 10 }}
                             />
                           )}
                         </ListItem>
                       ))}
-                      {/* ... No document message ... */}
+                      {(!module.documents || module.documents.length === 0) && (
+                        <Typography variant="body2" color="textSecondary">Chưa có tài liệu nào.</Typography>
+                      )}
                     </List>
                   </Box>
                 </div>
@@ -491,7 +626,7 @@ const EditContentDetails: React.FC<Props> = ({
       )}
 
       {/* Dialog Thêm/Sửa Tài liệu */}
-      <Dialog open={docDialogOpen} onClose={handleCloseDocDialog} /* ... */>
+      <Dialog open={docDialogOpen} onClose={handleCloseDocDialog} fullWidth maxWidth="sm">
         <DialogTitle>
           {editingDocument ? "Chỉnh sửa tài liệu" : "Thêm tài liệu mới"}
         </DialogTitle>
@@ -569,9 +704,36 @@ const EditContentDetails: React.FC<Props> = ({
       <Dialog
         open={contentDialogOpen}
         onClose={handleCloseEditContentDialog}
+        fullWidth maxWidth="xs"
       >
-        {/* ... Dialog content/actions for editing content ... */}
+        <DialogTitle>Chỉnh sửa nội dung</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Nội dung"
+            fullWidth
+            value={editingContent?.contentName || ''}
+            onChange={(e) => setEditingContent(prev => prev ? ({ ...prev, contentName: e.target.value }) : null)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditContentDialog}>Hủy</Button>
+          <Button onClick={handleSaveContentChanges} variant="contained">Lưu</Button>
+        </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+        sx={{ marginTop: '60px' }}
+      >
+        <Alert onClose={handleCloseNotification} severity={notification.severity} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

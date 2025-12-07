@@ -1,10 +1,11 @@
 import { axiosClient } from "../api/axios_client";
+import { DashboardStatsResponse, ActivityResponse } from "../model/dashboard_model";
 
 // --- Interfaces ---
 
 export interface KpiData {
     revenue: number;
-    revenueGrowth: number; // % change from last month
+    revenueGrowth: number;
     newStudents: number;
     activeClasses: number;
     pendingInvoices: number;
@@ -36,14 +37,14 @@ export interface ClassOccupancyData {
 }
 
 export interface ClassScheduleData {
-    timeFrame: string; // 'Morning', 'Afternoon', 'Evening'
+    timeFrame: string;
     count: number;
 }
 
 export interface AttendanceRateData {
     classId: number;
     className: string;
-    attendanceRate: number; // % present
+    attendanceRate: number;
 }
 
 export interface LecturerProductivityData {
@@ -137,10 +138,52 @@ const MOCK_DASHBOARD_DATA: DashboardData = {
     ],
 };
 
+// --- API Service Functions ---
+
+export const getDashboardStats = async (): Promise<DashboardStatsResponse> => {
+    const response = await axiosClient.get<DashboardStatsResponse>("/admin/dashboard/stats");
+    console.log("Fetched dashboard stats:", response.data);
+    return response.data;
+};
+
+export const getRecentActivities = async (limit: number = 10): Promise<ActivityResponse[]> => {
+    const response = await axiosClient.get("/admin/dashboard/activities", {
+        params: { limit }
+    });
+    return response.data.data as ActivityResponse[];
+};
+
 // --- Service Functions ---
 
 export const getDashboardData = async (): Promise<DashboardData> => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    return MOCK_DASHBOARD_DATA;
+    try {
+        // Gọi API thật để lấy stats
+        const stats = await getDashboardStats();
+        
+        // Map dữ liệu từ API sang format cũ để tương thích với UI hiện tại
+        const dashboardData: DashboardData = {
+            kpi: {
+                revenue: stats.doanhThuThang || 0,
+                revenueGrowth: 12.5,
+                newStudents: stats.dangKyHomNay || 0,
+                activeClasses: stats.lopDangDay || 0,
+                pendingInvoices: 8,
+            },
+            // Các phần khác vẫn dùng mock data tạm thời vì chưa có API
+            annualRevenue: MOCK_DASHBOARD_DATA.annualRevenue,
+            topCourses: MOCK_DASHBOARD_DATA.topCourses,
+            paymentMethods: MOCK_DASHBOARD_DATA.paymentMethods,
+            classOccupancy: MOCK_DASHBOARD_DATA.classOccupancy,
+            classSchedule: MOCK_DASHBOARD_DATA.classSchedule,
+            attendanceRates: MOCK_DASHBOARD_DATA.attendanceRates,
+            topLecturers: MOCK_DASHBOARD_DATA.topLecturers,
+            lecturerDistribution: MOCK_DASHBOARD_DATA.lecturerDistribution,
+        };
+        
+        return dashboardData;
+    } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+        // Fallback to mock data if API fails
+        return MOCK_DASHBOARD_DATA;
+    }
 };

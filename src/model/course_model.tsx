@@ -1,4 +1,5 @@
 import { DocumentData } from "../pages/admin/add_course";
+import { ClassInfo } from "./class_model";
 
 export interface Objective {
   id: number;
@@ -102,6 +103,7 @@ export interface CourseDetails {
     noidung: { tennoidung: string }[];
     tailieu: DocumentData[];
   }[];
+  skillIds?: number[];
 }
 
 export interface CourseUpdateRequest {
@@ -112,26 +114,73 @@ export interface CourseUpdateRequest {
   entryLevel: string;
   targetLevel: string;
   image: string;
-  // Objectives có thể gửi ở đây nếu backend xử lý
-  // objectives?: { objectiveName: string }[];
+  categoryId: number;
+  studyHours: number;
+  skillIdsToAdd: number[];
+  skillIdsToRemove: number[];
+}
+
+export enum ActionEnum {
+  CREATE = "CREATE",
+  UPDATE = "UPDATE",
+  DELETE = "DELETE",
+}
+
+export interface ContentUpdateRequest {
+  id?: number;
+  contentName?: string;
+  action: ActionEnum;
+}
+
+export interface DocumentUpdateRequest {
+  id?: number;
+  fileName?: string;
+  link?: string;
+  description?: string;
+  image?: string;
+  action: ActionEnum;
 }
 
 export interface ModuleUpdateRequest {
-  moduleName: string;
-  duration: number;
-  documents?: {
-    fileName: string;
-    link: string;
-    description: string;
-    image: string;
-  }[];
-  contents?: {
-    id: number;
-    contentName: string;
-  }[];
+  moduleName?: string;
+  documents?: DocumentUpdateRequest[];
+  contents?: ContentUpdateRequest[];
 }
 
 export interface SkillResponse {
   id: number;
   skillName: string;
+}
+
+export interface SkillModuleGroup {
+  skillId: number;
+  skillName: string;
+  modules: Module[];
+}
+
+export interface ComboPromotionInfo {
+  comboName: string;
+  discountPercent: number;
+  requiredCourseNames: string[];
+}
+
+export interface CourseDetailResponse {
+  courseId: number;
+  courseName: string;
+  studyHours: number;
+  tuitionFee: number;
+  PromotionPrice: number;
+  video: string;
+  status: boolean;
+  description: string;
+  entryLevel: string;
+  targetLevel: string;
+  image: string;
+  courseCategoryId: number;
+  category: string;
+  level: string;
+  objectives: Objective[];
+  skillModules: SkillModuleGroup[];
+  comboPromotions: ComboPromotionInfo[];
+  classInfos: ClassInfo[];
 }

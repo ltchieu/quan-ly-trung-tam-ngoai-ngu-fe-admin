@@ -8,43 +8,37 @@ import {
   CircularProgress,
   Alert,
   InputAdornment,
+  Autocomplete,
+  Chip
 } from "@mui/material";
-import { updateCourse } from "../services/course_service";
+import { updateCourse, getAllSkills } from "../services/course_service";
 import { getImageUrl } from "../services/file_service";
 import InputFileUpload from "./button_upload_file";
-import { CourseDetails, CourseUpdateRequest } from "../model/course_model";
+import { CourseDetailResponse, CourseUpdateRequest, SkillResponse } from "../model/course_model";
 
 interface Props {
   courseId: number;
-  initialData: CourseDetails;
+  initialData: CourseDetailResponse;
   onSaveSuccess?: () => void;
+  hasOpenClasses?: boolean;
+  totalModuleDuration?: number;
 }
 
 // --- Các hàm tiện ích ---
-/**
- * Định dạng số thành chuỗi tiền tệ Việt Nam (ví dụ: 1.000.000).
- * Trả về chuỗi rỗng nếu giá trị là 0 hoặc không hợp lệ.
- */
 const formatNumberWithDots = (
   value: number | string | undefined | null
 ): string => {
   const numValue = Number(String(value).replace(/[^0-9]/g, ""));
   if (isNaN(numValue) || !numValue) return "";
-  return numValue.toLocaleString("de-DE"); // Dùng locale 'de-DE' để có dấu chấm
+  return numValue.toLocaleString("de-DE");
 };
 
-/**
- * Chuyển đổi chuỗi số đã định dạng (có dấu chấm) thành số.
- */
 const parseFormattedNumber = (value: string | undefined | null): number => {
   if (!value) return 0;
   const numString = String(value).replace(/[^0-9]/g, "");
   return Number(numString) || 0;
 };
 
-/**
- * Lấy ID video YouTube và trả về link embed.
- */
 const handleLinkYoutube = (link: string): string | null => {
   const regex = /(?:v=|youtu\.be\/|embed\/|shorts\/)([a-zA-Z0-9_-]{11})/;
   const match = link.match(regex);
@@ -56,11 +50,13 @@ const EditCourseInfo: React.FC<Props> = ({
   courseId,
   initialData,
   onSaveSuccess,
+  hasOpenClasses = false,
+  totalModuleDuration = 0
 }) => {
 
-  const [formData, setFormData] = useState<CourseDetails>(initialData);
+  const [formData, setFormData] = useState<CourseDetailResponse>(initialData);
   const [displayHocPhi, setDisplayHocPhi] = useState<string>(() =>
-    formatNumberWithDots(initialData.hocphi)
+    formatNumberWithDots(initialData.tuitionFee)
   );
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [imgUrl, setImgUrl] = useState<string | null>(() =>
@@ -71,22 +67,48 @@ const EditCourseInfo: React.FC<Props> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
 
+  // Skill state
+  const [allSkills, setAllSkills] = useState<SkillResponse[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<SkillResponse[]>([]);
+
   useEffect(() => {
     setFormData(initialData);
-    setDisplayHocPhi(formatNumberWithDots(initialData.hocphi));
+    setDisplayHocPhi(formatNumberWithDots(initialData.tuitionFee));
     setImgUrl(initialData.image ? getImageUrl(initialData.image) : null);
+
+    // Fetch skills if not loaded
+    const fetchSkills = async () => {
+      try {
+        const res = await getAllSkills();
+        if (res.data) {
+          setAllSkills(res.data);
+          // Set selected skills based on initialData.skillModules
+          const initialSkillIds = initialData.skillModules?.map(g => g.skillId) || [];
+          if (initialSkillIds.length > 0) {
+            const selected = res.data.filter(s => initialSkillIds.includes(s.id));
+            setSelectedSkills(selected);
+          } else {
+            setSelectedSkills([]);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load skills", error);
+      }
+    };
+    fetchSkills();
+
   }, [initialData]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setSaveSuccess(false);
 
-    if (name === "hocphi") {
+    if (name === "tuitionFee") {
       const numericValue = parseFormattedNumber(value);
       setFormData((prev) => ({ ...prev, [name]: numericValue }));
 
       setDisplayHocPhi(formatNumberWithDots(numericValue));
-    } else if (name === "sobuoihoc" || name === "sogiohoc") {
+    } else if (name === "studyHours") {
       const numericValue = parseFormattedNumber(value);
 
       setFormData((prev) => ({ ...prev, [name]: numericValue }));
@@ -125,13 +147,13 @@ const EditCourseInfo: React.FC<Props> = ({
 
   const handleSaveChanges = async () => {
     if (
-      !formData.tenkhoahoc ||
-      formData.hocphi <= 0 ||
-      formData.sogiohoc <= 0 ||
+      !formData.courseName ||
+      formData.tuitionFee < 0 || // allow 0? Previous check was <= 0
+      formData.studyHours <= 0 ||
       !formData.image
     ) {
       setSaveError(
-        "Vui lòng điền đầy đủ các trường bắt buộc (*), bao gồm cả ảnh bìa."
+        "Vui lòng điền đầy đủ các trường bắt buộc (*), bao gồm cả ảnh bìa. Học phí phải không âm."
       );
       return;
     }
@@ -140,19 +162,37 @@ const EditCourseInfo: React.FC<Props> = ({
       return;
     }
 
+    if (!hasOpenClasses) {
+      if (formData.studyHours !== totalModuleDuration) {
+        setSaveError(`Tổng thời lượng các module (${totalModuleDuration}h) không khớp với số giờ học (${formData.studyHours}h). Vui lòng điều chỉnh.`);
+        return;
+      }
+    }
+
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
 
     try {
+      // Calculate skill diffs
+      const currentSkillIds = selectedSkills.map(s => s.id);
+      const initialSkillIds = initialData.skillModules?.map(g => g.skillId) || [];
+
+      const skillIdsToAdd = currentSkillIds.filter(id => !initialSkillIds.includes(id));
+      const skillIdsToRemove = initialSkillIds.filter(id => !currentSkillIds.includes(id));
+
       const updateRequest: CourseUpdateRequest = {
-        courseName: formData.tenkhoahoc,
-        tuitionFee: formData.hocphi,
+        courseName: formData.courseName,
+        tuitionFee: formData.tuitionFee,
         video: formData.video,
         description: formData.description,
         entryLevel: formData.entryLevel,
         targetLevel: formData.targetLevel,
         image: formData.image,
+        categoryId: Number(formData.courseCategoryId),
+        studyHours: formData.studyHours,
+        skillIdsToAdd: skillIdsToAdd,
+        skillIdsToRemove: skillIdsToRemove,
       };
 
       await updateCourse(courseId, updateRequest);
@@ -175,16 +215,35 @@ const EditCourseInfo: React.FC<Props> = ({
       <Typography variant="h6" gutterBottom>
         Thông tin chung
       </Typography>
+      {hasOpenClasses && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Khóa học đang có lớp mở. Bạn chỉ có thể chỉnh sửa mô tả, học phí, video và ảnh bìa.
+        </Alert>
+      )}
+
       <Grid container spacing={3} alignItems="flex-start">
+        <Grid size={{ xs: 12 }}>
+          <TextField
+            required
+            name="category"
+            label="Tên danh mục (*)"
+            fullWidth
+            value={formData.category || ""}
+            onChange={handleChange}
+            disabled={true}
+          />
+        </Grid>
+
         {/* Tên khóa học */}
         <Grid size={{ xs: 12 }}>
           <TextField
             required
-            name="tenkhoahoc"
+            name="courseName"
             label="Tên khóa học (*)"
             fullWidth
-            value={formData.tenkhoahoc || ""}
+            value={formData.courseName || ""}
             onChange={handleChange}
+            disabled={hasOpenClasses}
           />
         </Grid>
 
@@ -192,7 +251,7 @@ const EditCourseInfo: React.FC<Props> = ({
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             required
-            name="hocphi"
+            name="tuitionFee"
             label="Học phí (*)"
             fullWidth
             value={displayHocPhi}
@@ -209,23 +268,23 @@ const EditCourseInfo: React.FC<Props> = ({
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             required
-            name="sogiohoc"
+            name="studyHours"
             label="Số giờ học (*)"
             type="number"
             fullWidth
-            // Hiển thị giá trị số, rỗng nếu là 0
-            value={formData.sogiohoc === 0 ? "" : formData.sogiohoc}
+            value={formData.studyHours === 0 ? "" : formData.studyHours}
             onChange={handleChange}
             onFocus={handleFocusSelect}
-            InputProps={{ inputProps: { min: 1 } }} // Ít nhất 1 giờ
-            helperText="Tổng thời lượng modules phải khớp số này"
+            InputProps={{ inputProps: { min: 20 } }}
+            helperText={!hasOpenClasses ? `Tổng thời lượng modules: ${totalModuleDuration}h` : ""}
+            disabled={hasOpenClasses}
           />
         </Grid>
 
         {/* Trạng thái - Hiển thị trạng thái hiện tại, không cho sửa ở đây */}
         <Grid size={{ xs: 12, sm: 6 }}>
           <Typography variant="body2" color="textSecondary" sx={{ mt: 3 }}>
-            Trạng thái hiện tại: {initialData.trangthai || "N/A"}
+            Trạng thái hiện tại: {initialData.status ? "Đang mở" : "Đóng"}
           </Typography>
         </Grid>
 
@@ -248,6 +307,7 @@ const EditCourseInfo: React.FC<Props> = ({
             fullWidth
             value={formData.entryLevel || ""}
             onChange={handleChange}
+            disabled={hasOpenClasses}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -257,6 +317,38 @@ const EditCourseInfo: React.FC<Props> = ({
             fullWidth
             value={formData.targetLevel || ""}
             onChange={handleChange}
+            disabled={hasOpenClasses}
+          />
+        </Grid>
+
+        {/* Skills Selection */}
+        <Grid size={{ xs: 12 }}>
+          <Autocomplete
+            multiple
+            id="skills-tags"
+            options={allSkills}
+            getOptionLabel={(option) => option.skillName}
+            value={selectedSkills}
+            onChange={(event, newValue) => {
+              setSelectedSkills(newValue);
+            }}
+            disabled={hasOpenClasses}
+            renderTags={(value: readonly SkillResponse[], getTagProps) =>
+              value.map((option: SkillResponse, index: number) => {
+                const { key, ...tagProps } = getTagProps({ index });
+                return (
+                  <Chip variant="outlined" label={option.skillName} key={key} {...tagProps} />
+                )
+              })
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                label="Kỹ năng"
+                placeholder="Chọn kỹ năng..."
+              />
+            )}
           />
         </Grid>
 

@@ -4,47 +4,65 @@ export interface ScheduleCheckRequest {
   startTime: string;
   durationMinutes: number;
   schedulePattern: string; // Ví dụ: "2-4-6"
+  excludeClassId?: number | null;
   preferredRoomId?: number | null;
   preferredLecturerId?: number | null;
 }
 
-// Thông tin phòng/giảng viên khả dụng
-export interface ResourceOption {
-  id: number;
-  name: string;
+// Thông tin xung đột chi tiết
+export interface ConflictInfo {
+  type: string; // "ROOM_CONFLICT" hoặc "TEACHER_CONFLICT"
+  description: string;
+  conflictDate?: string;
+  conflictStartTime?: string;
+  conflictEndTime?: string;
+  conflictingClassName?: string;
+  conflictingCourseName?: string;
 }
 
-// Thông tin check ban đầu
-export interface InitialCheckResult {
+// Thông tin check ban đầu (AvailabilityResult)
+export interface AvailabilityResult {
   hasAvailableRooms: boolean;
   hasAvailableLecturers: boolean;
   availableRoomCount: number;
   availableLecturerCount: number;
-  roomConflicts?: { type: string; description: string }[];
-  lecturerConflicts?: { type: string; description: string }[];
+  roomConflicts?: ConflictInfo[];
+  lecturerConflicts?: ConflictInfo[];
 }
+
+// Thông tin phòng/giảng viên khả dụng (ResourceInfo)
+export interface ResourceInfo {
+  id: number;
+  name: string;
+  additionalInfo?: string;
+}
+
+// Legacy alias for backward compatibility
+export type ResourceOption = ResourceInfo;
 
 // Một phương án thay thế (Alternative)
 export interface ScheduleAlternative {
-  type: "ALTERNATIVE_TIME" | "ALTERNATIVE_ROOM" | "ALTERNATIVE_START_DATE";
+  type: string; // "ALTERNATIVE_TIME", "ALTERNATIVE_ROOM", "ALTERNATIVE_START_DATE"
   reason: string;
   priority: number;
   startDate: string;
   startTime: string;
   endTime: string;
   schedulePattern: string;
-  availableRooms: ResourceOption[];
-  availableLecturers: ResourceOption[];
+  availableRooms: ResourceInfo[];
+  availableLecturers: ResourceInfo[];
 }
 
 // Response tổng từ API
 export interface ScheduleSuggestionResponse {
   status: "AVAILABLE" | "CONFLICT";
   message: string;
-  initialCheck: InitialCheckResult;
-  availableRooms: ResourceOption[];
-  availableLecturers: ResourceOption[];
-  alternatives: ScheduleAlternative[];
+  initialCheck: AvailabilityResult;
+  // Nếu available
+  availableRooms?: ResourceInfo[];
+  availableLecturers?: ResourceInfo[];
+  // Nếu conflict
+  alternatives?: ScheduleAlternative[];
 }
 
 export interface Session {

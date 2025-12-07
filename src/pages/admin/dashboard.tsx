@@ -6,6 +6,7 @@ import { TopCourses } from "../../component/dashboard/TopCourses";
 import { PaymentMethodChart } from "../../component/dashboard/PaymentMethodChart";
 import { TrainingStats } from "../../component/dashboard/TrainingStats";
 import { LecturerStats } from "../../component/dashboard/LecturerStats";
+import { RecentActivities } from "../../component/dashboard/RecentActivities";
 import {
   getDashboardData,
   DashboardData,
@@ -100,6 +101,14 @@ const DashboardPage: React.FC = () => {
             topLecturers={data.topLecturers}
             distribution={data.lecturerDistribution}
           />
+        </section>
+
+        {/* 5. Recent Activities */}
+        <section>
+          <Typography variant="h5" sx={{ mb: 2, fontWeight: "bold" }}>
+            Hoạt động Hệ thống
+          </Typography>
+          <RecentActivities limit={15} autoRefresh={true} refreshInterval={30} />
         </section>
       </Box>
     </Container>

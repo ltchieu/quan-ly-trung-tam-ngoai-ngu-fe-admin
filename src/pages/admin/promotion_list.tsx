@@ -20,33 +20,32 @@ import {
   Breadcrumbs,
   Link,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate } from "react-router-dom";
-import { KhuyenMai, LoaiKhuyenMai } from "../../model/promotion_model";
-import { getAllPromotions, deletePromotion, getAllPromotionTypes } from "../../services/promotion_service";
+import { PromotionResponse } from "../../model/promotion_model";
+import { getAllPromotions, deletePromotion } from "../../services/promotion_service";
 import dayjs from "dayjs";
 
 const PromotionListPage: React.FC = () => {
   const navigate = useNavigate();
-  const [promotions, setPromotions] = useState<KhuyenMai[]>([]);
-  const [promotionTypes, setPromotionTypes] = useState<LoaiKhuyenMai[]>([]);
+  const [promotions, setPromotions] = useState<PromotionResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("ALL");
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const [promoData, typeData] = await Promise.all([
-        getAllPromotions(),
-        getAllPromotionTypes(),
-      ]);
+      const promoData = await getAllPromotions();
       setPromotions(promoData);
-      setPromotionTypes(typeData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch data", error);
+      setError(error.message || "Không thể tải danh sách khuyến mãi");
     } finally {
       setLoading(false);
     }
@@ -56,35 +55,40 @@ const PromotionListPage: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa khuyến mãi này?")) {
+  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
+    const action = currentStatus ? "tắt" : "bật";
+    if (window.confirm(`Bạn có chắc chắn muốn ${action} khuyến mãi này?`)) {
       try {
-        await deletePromotion(id);
+        await deletePromotion(id); // This is now togglePromotionStatus
         fetchData();
-      } catch (error) {
-        console.error("Failed to delete promotion", error);
+      } catch (error: any) {
+        console.error("Failed to toggle promotion status", error);
+        alert(error.message || "Thay đổi trạng thái khuyến mãi thất bại");
       }
     }
   };
 
+  // Get unique promotion types from the data
+  const promotionTypes = Array.from(
+    new Set(promotions.map(p => p.promotionTypeName))
+  ).map((name, index) => ({
+    id: promotions.find(p => p.promotionTypeName === name)?.promotionTypeId || index,
+    name: name
+  }));
+
   const filteredPromotions = promotions.filter((p) => {
     if (filterType === "ALL") return true;
-    return p.maLoaiKhuyenMai === Number(filterType);
+    return p.promotionTypeId === Number(filterType);
   });
-
-  const getTypeLabel = (typeId: number) => {
-    const type = promotionTypes.find(t => t.ma === typeId);
-    return type ? type.ten : "Unknown";
-  };
 
   const getTypeColor = (typeId: number) => {
     switch (typeId) {
-      case 1: // Combo
-        return "primary";
-      case 2: // Student Loyalty
-        return "secondary";
-      case 3: // Course Discount
+      case 1: // Khuyến mãi học lẻ
         return "success";
+      case 2: // Khuyến mãi combo
+        return "primary";
+      case 3: // Khuyến mãi học viên cũ
+        return "secondary";
       default:
         return "default";
     }
@@ -129,8 +133,8 @@ const PromotionListPage: React.FC = () => {
           >
             <MenuItem value="ALL">Tất cả</MenuItem>
             {promotionTypes.map((type) => (
-              <MenuItem key={type.ma} value={type.ma}>
-                {type.ten}
+              <MenuItem key={type.id} value={type.id}>
+                {type.name}
               </MenuItem>
             ))}
           </Select>
@@ -157,6 +161,12 @@ const PromotionListPage: React.FC = () => {
                   <CircularProgress />
                 </TableCell>
               </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                  <Alert severity="error">{error}</Alert>
+                </TableCell>
+              </TableRow>
             ) : filteredPromotions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
@@ -167,46 +177,47 @@ const PromotionListPage: React.FC = () => {
               </TableRow>
             ) : (
               filteredPromotions.map((promo) => (
-                <TableRow key={promo.maKhuyenMai} hover>
+                <TableRow key={promo.id} hover>
                   <TableCell>
                     <Typography variant="subtitle1" fontWeight="bold">
-                      {promo.tenKhuyenMai}
+                      {promo.name}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {promo.moTa}
+                      {promo.description}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={getTypeLabel(promo.maLoaiKhuyenMai)}
-                      color={getTypeColor(promo.maLoaiKhuyenMai)}
+                      label={promo.promotionTypeName}
+                      color={getTypeColor(promo.promotionTypeId)}
                       size="small"
                       variant="outlined"
                     />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {dayjs(promo.ngayBatDau).format("DD/MM/YYYY")} -{" "}
-                      {dayjs(promo.ngayKetThuc).format("DD/MM/YYYY")}
+                      {dayjs(promo.startDate).format("DD/MM/YYYY")} -{" "}
+                      {dayjs(promo.endDate).format("DD/MM/YYYY")}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={promo.trangThai ? "Đang chạy" : "Tạm dừng"}
-                      color={promo.trangThai ? "success" : "default"}
+                      label={promo.active ? "Đang chạy" : "Tạm dừng"}
+                      color={promo.active ? "success" : "default"}
                       size="small"
                     />
                   </TableCell>
                   <TableCell align="center">
                     <IconButton
                       color="primary"
-                      onClick={() => navigate(`/promotions/${promo.maKhuyenMai}`)}
+                      onClick={() => navigate(`/promotions/${promo.id}`)}
                     >
                       <EditIcon />
                     </IconButton>
                     <IconButton
-                      color="error"
-                      onClick={() => handleDelete(promo.maKhuyenMai)}
+                      color={promo.active ? "error" : "success"}
+                      onClick={() => handleToggleStatus(promo.id, promo.active)}
+                      title={promo.active ? "Tắt khuyến mãi" : "Bật khuyến mãi"}
                     >
                       <DeleteIcon />
                     </IconButton>

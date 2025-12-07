@@ -59,10 +59,11 @@ import { checkAndSuggestSchedule } from "../../services/schedule_service";
 import {
   ScheduleCheckRequest,
   ScheduleSuggestionResponse,
-  ResourceOption,
+  ResourceInfo,
   ScheduleAlternative,
 } from "../../model/schedule_model";
 import { ClassDetailResponse } from "../../model/class_model";
+import SuggestionDialog from "../../component/suggestion_dialog";
 
 // --- CÁC HÀM HELPER ---
 const DAY_OPTIONS = [
@@ -112,11 +113,12 @@ const EditClass: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [suggestionResult, setSuggestionResult] =
     useState<ScheduleSuggestionResponse | null>(null);
+  const [showSuggestionDialog, setShowSuggestionDialog] = useState(false);
 
   // Danh sách Resource
-  const [availableRooms, setAvailableRooms] = useState<ResourceOption[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<ResourceInfo[]>([]);
   const [availableLecturers, setAvailableLecturers] = useState<
-    ResourceOption[]
+    ResourceInfo[]
   >([]);
 
   const [activeTab, setActiveTab] = useState(0);
@@ -358,25 +360,26 @@ const EditClass: React.FC = () => {
 
       // Nếu Available -> Update list Available mới nhất từ API (chứa các phòng rảnh trong khung giờ mới)
       if (result.status === "AVAILABLE") {
-        setAvailableRooms(result.availableRooms);
-        setAvailableLecturers(result.availableLecturers);
+        setAvailableRooms(result.availableRooms || []);
+        setAvailableLecturers(result.availableLecturers || []);
 
         // Check xem phòng/gv đang chọn có còn valid không
-        const isRoomOk = result.availableRooms.some(
+        const isRoomOk = result.availableRooms?.some(
           (r) => String(r.id) === String(roomId)
         );
-        const isLecOk = result.availableLecturers.some(
+        const isLecOk = result.availableLecturers?.some(
           (l) => String(l.id) === String(lecturerId)
         );
 
         if (!isRoomOk) formik.setFieldValue("roomId", "");
         if (!isLecOk) formik.setFieldValue("lecturerId", "");
       } else {
-        // Nếu Conflict -> Clear để ép chọn lại từ gợi ý
+        // Nếu Conflict -> Clear và mở dialog
         setAvailableRooms([]);
         setAvailableLecturers([]);
         formik.setFieldValue("roomId", "");
         formik.setFieldValue("lecturerId", "");
+        setShowSuggestionDialog(true);
       }
     } catch (e) {
       console.error(e);
@@ -390,8 +393,8 @@ const EditClass: React.FC = () => {
     formik.setFieldValue("startDate", alt.startDate);
     formik.setFieldValue("startTime", alt.startTime);
     formik.setFieldValue("schedulePattern", alt.schedulePattern);
-    setAvailableRooms(alt.availableRooms);
-    setAvailableLecturers(alt.availableLecturers);
+    setAvailableRooms(alt.availableRooms || []);
+    setAvailableLecturers(alt.availableLecturers || []);
     formik.setFieldValue("roomId", "");
     formik.setFieldValue("lecturerId", "");
     setSuggestionResult(null);
@@ -704,188 +707,37 @@ const EditClass: React.FC = () => {
                 >
                   {suggestionResult?.status === "CONFLICT" ? (
                     <Paper
-                      sx={{ p: 2, bgcolor: "#fff3e0", border: "1px solid #ffcc80" }}
+                      sx={{ p: 2, bgcolor: "#ffebee", border: "1px solid #ef5350" }}
                     >
                       <Stack direction="row" spacing={1} alignItems="center" mb={2}>
                         <Typography
                           variant="h6"
-                          color="warning.main"
+                          color="error.main"
                           fontWeight="bold"
                         >
                           Phát hiện xung đột
                         </Typography>
                       </Stack>
-                      <Alert severity="warning" sx={{ mb: 2 }}>
+                      <Alert severity="error" sx={{ mb: 2 }}>
                         {suggestionResult.message}
                       </Alert>
 
-                      {/* Lý do conflict */}
-                      <Box mt={1}>
-                        {suggestionResult.initialCheck.roomConflicts?.map(
-                          (c, i) => (
-                            <Typography
-                              key={`rc-${i}`}
-                              variant="caption"
-                              display="block"
-                              color="error"
-                            >
-                              • {c.description}
-                            </Typography>
-                          )
-                        )}
-                        {suggestionResult.initialCheck.lecturerConflicts?.map(
-                          (c, i) => (
-                            <Typography
-                              key={`lc-${i}`}
-                              variant="caption"
-                              display="block"
-                              color="error"
-                            >
-                              • {c.description}
-                            </Typography>
-                          )
-                        )}
-                      </Box>
-
-                      <Divider sx={{ my: 2 }} />
-                      <Typography
-                        variant="subtitle2"
-                        gutterBottom
-                        sx={{ fontWeight: "bold" }}
-                      >
-                        Gợi ý thay thế:
+                      <Typography variant="body2" sx={{ mb: 2 }}>
+                        Có {suggestionResult.alternatives?.length || 0} phương án thay thế khả dụng.
                       </Typography>
 
-                      <Stack
-                        spacing={1}
-                        sx={{ maxHeight: 400, overflowY: "auto", pr: 0.5 }}
+                      <Button
+                        variant="contained"
+                        color="error"
+                        fullWidth
+                        onClick={() => setShowSuggestionDialog(true)}
                       >
-                        {suggestionResult.alternatives.map((alt, index) => (
-                          <Card
-                            key={index}
-                            variant="outlined"
-                            sx={{
-                              minHeight: "80px",
-                              borderColor:
-                                alt.priority > 100 ? "success.main" : "grey.300",
-                              bgcolor:
-                                alt.priority > 100 ? "#f0fdf4" : "background.paper",
-                              borderWidth: alt.priority > 100 ? 2 : 1,
-                              transition: "all 0.2s",
-                              "&:hover": {
-                                borderColor: "primary.main",
-                                boxShadow: 2,
-                              },
-                            }}
-                          >
-                            <CardActionArea
-                              onClick={() => applyAlternative(alt)}
-                              sx={{ height: "100%" }}
-                            >
-                              <CardContent
-                                sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}
-                              >
-                                <Grid container spacing={1} alignItems="center">
-                                  <Grid size={{ xs: 12, sm: 9 }}>
-                                    <Stack direction="column" spacing={0.5}>
-                                      <Box
-                                        display="flex"
-                                        alignItems="center"
-                                        gap={1}
-                                      >
-                                        <Chip
-                                          label={
-                                            alt.type
-                                              ? alt.type.replace("ALTERNATIVE_", "")
-                                              : "GỢI Ý"
-                                          }
-                                          size="small"
-                                          color={
-                                            alt.priority > 100
-                                              ? "success"
-                                              : "primary"
-                                          }
-                                          sx={{
-                                            fontWeight: "bold",
-                                            fontSize: "0.7rem",
-                                            height: 20,
-                                          }}
-                                        />
-                                        {alt.priority > 100 && (
-                                          <Chip
-                                            label="Ưu tiên"
-                                            size="small"
-                                            color="error"
-                                            variant="outlined"
-                                            sx={{ height: 20, fontSize: "0.65rem" }}
-                                          />
-                                        )}
-                                      </Box>
-                                      <Typography
-                                        variant="body2"
-                                        fontWeight="bold"
-                                        sx={{ lineHeight: 1.3 }}
-                                      >
-                                        {alt.reason ||
-                                          "Phương án thay thế khả dụng"}
-                                      </Typography>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                        sx={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 0.5,
-                                        }}
-                                      >
-                                        <span>
-                                          <FontAwesomeIcon icon={faCalendar} />{" "}
-                                          {alt.startDate}
-                                        </span>
-                                        <span>•</span>
-                                        <span>
-                                          <FontAwesomeIcon icon={faClock} />{" "}
-                                          {alt.startTime} - {alt.endTime}
-                                        </span>
-                                      </Typography>
-                                    </Stack>
-                                  </Grid>
-                                  <Grid
-                                    size={{ xs: 12, sm: 3 }}
-                                    sx={{ textAlign: "right" }}
-                                  >
-                                    <Typography
-                                      variant="caption"
-                                      display="block"
-                                      fontWeight="bold"
-                                      color="primary.main"
-                                      sx={{ mb: 0.5 }}
-                                    >
-                                      {alt.schedulePattern}
-                                    </Typography>
-                                    <Button
-                                      size="small"
-                                      variant="contained"
-                                      color="primary"
-                                      sx={{
-                                        fontSize: "0.7rem",
-                                        py: 0.5,
-                                        minWidth: "60px",
-                                      }}
-                                    >
-                                      Chọn
-                                    </Button>
-                                  </Grid>
-                                </Grid>
-                              </CardContent>
-                            </CardActionArea>
-                          </Card>
-                        ))}
-                      </Stack>
+                        Xem chi tiết xung đột và gợi ý
+                      </Button>
                     </Paper>
-                  ) : (
+                  ) : suggestionResult?.status === "AVAILABLE" ? (
                     <Paper
-                      sx={{ p: 2, bgcolor: "#e8f5e9", border: "1px solid #a5d6a7" }}
+                      sx={{ p: 2, bgcolor: "#e8f5e9", border: "1px solid #66bb6a" }}
                     >
                       <Stack direction="row" spacing={1} alignItems="center" mb={2}>
                         <Typography
@@ -921,7 +773,7 @@ const EditClass: React.FC = () => {
                         Chọn ngay
                       </Button>
                     </Paper>
-                  )}
+                  ) : null}
                 </Grid>
               )}
             </Grid>
@@ -1065,6 +917,17 @@ const EditClass: React.FC = () => {
           )}
         </div>
       </Box>
+
+      {/* Dialog hiển thị chi tiết xung đột và gợi ý */}
+      <SuggestionDialog
+        open={showSuggestionDialog}
+        onClose={() => setShowSuggestionDialog(false)}
+        data={suggestionResult}
+        onSelectAlternative={(alt) => {
+          applyAlternative(alt);
+          setShowSuggestionDialog(false);
+        }}
+      />
     </LocalizationProvider>
   );
 };

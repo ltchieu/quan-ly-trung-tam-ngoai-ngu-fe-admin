@@ -34,6 +34,15 @@ export interface QualificationDTO {
   level: string;
 }
 
+export interface AccountInfo {
+  userId: number;
+  username: string; // email hoặc sdt
+  password?: string; // chỉ trả về nếu là admin
+  role: string;
+  createdAt: string;
+  isVerified: boolean;
+}
+
 export interface TeacherInfo {
   lecturerId: number;
   fullName: string;
@@ -41,5 +50,15 @@ export interface TeacherInfo {
   imagePath: string;
   phoneNumber: string;
   email: string;
+  
+  // Thống kê
+  totalClasses?: number;
+  totalStudents?: number;
+  rating?: number;
+  totalReviews?: number;
+  
+  // Thông tin tài khoản (chỉ Admin mới xem được)
+  accountInfo?: AccountInfo;
+  
   qualifications: QualificationDTO[];
 }

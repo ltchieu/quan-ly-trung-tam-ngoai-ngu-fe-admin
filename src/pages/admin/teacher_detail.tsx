@@ -194,6 +194,43 @@ const TeacherDetailPage: React.FC = () => {
               </CardContent>
             </Card>
 
+            {/* Account Info Card (Admin Only) */}
+            {teacherInfo?.accountInfo && (
+              <Card sx={{ mt: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Thông tin tài khoản
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Stack spacing={1.5}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">Tên đăng nhập:</Typography>
+                      <Typography variant="body2" fontWeight="medium">{teacherInfo.accountInfo.username}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">Vai trò:</Typography>
+                      <Chip label={teacherInfo.accountInfo.role} size="small" color="info" sx={{ ml: 1 }} />
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">Ngày tạo:</Typography>
+                      <Typography variant="body2" fontWeight="medium">
+                        {dayjs(teacherInfo.accountInfo.createdAt).format('DD/MM/YYYY HH:mm')}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">Trạng thái xác thực:</Typography>
+                      <Chip 
+                        label={teacherInfo.accountInfo.isVerified ? "Đã xác thực" : "Chưa xác thực"} 
+                        size="small" 
+                        color={teacherInfo.accountInfo.isVerified ? "success" : "warning"} 
+                        sx={{ ml: 1 }} 
+                      />
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            )}
+
             <Card sx={{ mt: 3 }}>
               <CardContent>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
