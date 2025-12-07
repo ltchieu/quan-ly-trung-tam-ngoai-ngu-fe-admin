@@ -10,6 +10,6 @@ export async function uploadImage(file: File): Promise<string> {
 
 //Lấy đường dẫn ảnh
 export function getImageUrl(fileName: string): string {
-    console.log(axiosClient.defaults.baseURL + "/files/" + fileName);
+    // console.log(axiosClient.defaults.baseURL + "/files/" + fileName);
     return `${axiosClient.defaults.baseURL}/files/${fileName}`;
 }

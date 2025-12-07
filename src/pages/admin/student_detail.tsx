@@ -7,31 +7,33 @@ import {
   Stack,
   TextField,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Avatar,
   Snackbar,
   Alert,
   Breadcrumbs,
   Link,
   Grid,
+  Chip,
+  Paper,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
-import { StudentModel } from "../../model/student_model";
+import { StudentAdminResponse } from "../../model/student_model";
 import { getStudentById, updateStudent } from "../../services/student_service";
 import SaveIcon from "@mui/icons-material/Save";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import PersonIcon from "@mui/icons-material/Person";
 import dayjs from "dayjs";
+import InputFileUpload from "../../component/button_upload_file";
+import { getImageUrl } from "../../services/file_service";
 
 const StudentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [student, setStudent] = useState<StudentModel | null>(null);
+  const [student, setStudent] = useState<StudentAdminResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">("success");
 
   useEffect(() => {
     if (id) {
@@ -40,13 +42,21 @@ const StudentDetail: React.FC = () => {
   }, [id]);
 
   const fetchStudent = async (studentId: number) => {
+    setLoading(true);
     try {
-      const res = await getStudentById(studentId);
-      if (res.data.data) {
-        setStudent(res.data.data);
+      const response = await getStudentById(studentId);
+      if (response.code === 1000 && response.data) {
+        setStudent(response.data);
+      } else {
+        setSnackbarMsg("Không tìm thấy học viên");
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Lỗi khi tải thông tin học viên:", error);
+      setSnackbarMsg(error.message || "Có lỗi xảy ra khi tải dữ liệu");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
     } finally {
       setLoading(false);
     }
@@ -55,20 +65,48 @@ const StudentDetail: React.FC = () => {
   const handleSave = async () => {
     if (!student || !id) return;
     try {
-      await updateStudent(parseInt(id), student);
-      setSnackbarMsg("Cập nhật thông tin thành công!");
-      setOpenSnackbar(true);
-    } catch (error) {
+      const updateData: Partial<StudentAdminResponse> = {
+        fullName: student.fullName,
+        email: student.email,
+        phoneNumber: student.phoneNumber,
+        dateOfBirth: student.dateOfBirth,
+        address: student.address,
+        occupation: student.occupation,
+        educationLevel: student.educationLevel,
+        avatarUrl: student.avatarUrl,
+      };
+
+      const response = await updateStudent(parseInt(id), updateData);
+
+      if (response.code === 1000) {
+        // Refresh student data from server to ensure sync
+        if (response.data) {
+          setStudent(response.data);
+        }
+        setSnackbarMsg("Cập nhật thông tin thành công!");
+        setSnackbarSeverity("success");
+        setOpenSnackbar(true);
+      }
+    } catch (error: any) {
       console.error("Lỗi khi cập nhật:", error);
-      setSnackbarMsg("Có lỗi xảy ra, vui lòng thử lại.");
+      setSnackbarMsg(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
+      setSnackbarSeverity("error");
       setOpenSnackbar(true);
     }
   };
 
-  const handleChange = (field: keyof StudentModel, value: any) => {
+  const handleChange = (field: keyof StudentAdminResponse, value: any) => {
     if (student) {
       setStudent({ ...student, [field]: value });
     }
+  };
+
+  const handleUploadSuccess = (fileUrl: string) => {
+    console.log("Avatar uploaded successfully:", fileUrl);
+    handleChange("avatarUrl", fileUrl);
+    setSnackbarMsg("Upload ảnh thành công! Nhớ nhấn 'Lưu thay đổi' để cập nhật.");
+    setSnackbarSeverity("success");
+    setOpenSnackbar(true);
   };
 
   if (loading) {
@@ -93,7 +131,7 @@ const StudentDetail: React.FC = () => {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              navigate("/student");
+              navigate("/students");
             }}
           >
             Học viên
@@ -105,7 +143,7 @@ const StudentDetail: React.FC = () => {
           <Stack direction="row" spacing={2} alignItems="center">
             <Button
               startIcon={<ArrowBackIcon />}
-              onClick={() => navigate("/student")}
+              onClick={() => navigate("/students")}
               sx={{ color: "#667085" }}
             >
               Quay lại
@@ -135,11 +173,13 @@ const StudentDetail: React.FC = () => {
           <Grid size={{ xs: 12, md: 4 }}>
             <Card sx={{ p: 3, borderRadius: "16px", textAlign: "center", height: "100%" }}>
               <Avatar
-                src={student.hinhanh}
-                alt={student.hoten}
+                src={getImageUrl(student.avatarUrl || "")}
+                alt={student.fullName}
                 sx={{ width: 120, height: 120, mx: "auto", mb: 2, border: "4px solid #fff", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
-              />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>{student.hoten}</Typography>
+              >
+              </Avatar>
+              <InputFileUpload onUploadSuccess={handleUploadSuccess} />
+              <Typography variant="h6" sx={{ fontWeight: 600, mt: 2 }}>{student.fullName}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Học viên
               </Typography>
@@ -147,11 +187,22 @@ const StudentDetail: React.FC = () => {
               <Stack spacing={2} sx={{ textAlign: "left" }}>
                 <Box>
                   <Typography variant="caption" color="text.secondary">Mã học viên</Typography>
-                  <Typography variant="body1" fontWeight={500}>{student.mahocvien}</Typography>
+                  <Typography variant="body1" fontWeight={500}>{student.id}</Typography>
                 </Box>
                 <Box>
                   <Typography variant="caption" color="text.secondary">Ngày tham gia</Typography>
-                  <Typography variant="body1" fontWeight={500}>01/01/2023</Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {dayjs(student.enrollmentDate).format("DD/MM/YYYY")}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Số lớp đã đăng ký</Typography>
+                  <Chip
+                    label={student.totalClassesEnrolled}
+                    color="primary"
+                    size="small"
+                    sx={{ mt: 0.5 }}
+                  />
                 </Box>
               </Stack>
             </Card>
@@ -168,56 +219,13 @@ const StudentDetail: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Họ và tên"
-                    value={student.hoten}
-                    onChange={(e) => handleChange("hoten", e.target.value)}
+                    value={student.fullName}
+                    onChange={(e) => handleChange("fullName", e.target.value)}
                     variant="outlined"
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Giới tính</InputLabel>
-                    <Select
-                      value={student.gioitinh ? "true" : "false"}
-                      label="Giới tính"
-                      onChange={(e) => handleChange("gioitinh", e.target.value === "true")}
-                      sx={{ borderRadius: "8px" }}
-                    >
-                      <MenuItem value="true">Nam</MenuItem>
-                      <MenuItem value="false">Nữ</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Ngày sinh"
-                    type="date"
-                    value={dayjs(student.ngaysinh).format("YYYY-MM-DD")}
-                    onChange={(e) => handleChange("ngaysinh", e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Số điện thoại"
-                    value={student.sdt}
-                    onChange={(e) => handleChange("sdt", e.target.value)}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    label="Trình độ"
-                    value={student.trinhdo}
-                    onChange={(e) => handleChange("trinhdo", e.target.value)}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Email"
@@ -226,12 +234,50 @@ const StudentDetail: React.FC = () => {
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Số điện thoại"
+                    value={student.phoneNumber}
+                    onChange={(e) => handleChange("phoneNumber", e.target.value)}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Ngày sinh"
+                    type="date"
+                    value={student.dateOfBirth}
+                    onChange={(e) => handleChange("dateOfBirth", e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Nghề nghiệp"
+                    value={student.occupation || ""}
+                    onChange={(e) => handleChange("occupation", e.target.value)}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Trình độ học vấn"
+                    value={student.educationLevel || ""}
+                    onChange={(e) => handleChange("educationLevel", e.target.value)}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                </Grid>
                 <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Địa chỉ"
-                    value={student.diachi}
-                    onChange={(e) => handleChange("diachi", e.target.value)}
+                    value={student.address || ""}
+                    onChange={(e) => handleChange("address", e.target.value)}
                     multiline
                     rows={3}
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
@@ -244,11 +290,11 @@ const StudentDetail: React.FC = () => {
 
         <Snackbar
           open={openSnackbar}
-          autoHideDuration={3000}
+          autoHideDuration={2000}
           onClose={() => setOpenSnackbar(false)}
           anchorOrigin={{ vertical: "top", horizontal: "right" }}
         >
-          <Alert severity="success" onClose={() => setOpenSnackbar(false)}>
+          <Alert severity={snackbarSeverity} onClose={() => setOpenSnackbar(false)}>
             {snackbarMsg}
           </Alert>
         </Snackbar>

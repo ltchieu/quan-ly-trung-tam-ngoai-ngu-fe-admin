@@ -23,6 +23,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { RoomResponse } from '../../model/room_model';
 import {
     getAllRooms,
@@ -30,8 +31,10 @@ import {
     updateRoom,
     deleteRoom
 } from '../../services/room_service';
+import { useNavigate } from 'react-router-dom';
 
 const RoomPage = () => {
+    const navigate = useNavigate();
     const [rooms, setRooms] = useState<RoomResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -54,10 +57,11 @@ const RoomPage = () => {
     const fetchRooms = async () => {
         try {
             setLoading(true);
-            const response = await getAllRooms();
-            setRooms(response.data);
-        } catch (err) {
-            setError('Failed to load rooms');
+            const data = await getAllRooms();
+            setRooms(data);
+        } catch (err: any) {
+            const errorMessage = err?.response?.data?.message || 'Failed to load rooms';
+            setError(errorMessage);
             console.error(err);
         } finally {
             setLoading(false);
@@ -67,7 +71,7 @@ const RoomPage = () => {
     const handleOpenDialog = (room?: RoomResponse) => {
         if (room) {
             setCurrentRoom(room);
-            setRoomName(room.name);
+            setRoomName(room.roomName);
             setRoomCapacity(room.capacity);
         } else {
             setCurrentRoom(null);
@@ -95,19 +99,21 @@ const RoomPage = () => {
         }
 
         try {
-            const data = { name: roomName, capacity: Number(roomCapacity) };
             if (currentRoom) {
-                await updateRoom(currentRoom.id, data);
-                setSnackbar({ open: true, message: 'Room updated successfully', severity: 'success' });
+                // Update not available in API
+                setSnackbar({ open: true, message: 'Update room feature is not available', severity: 'error' });
+                return;
             } else {
-                await createRoom(data);
+                const requestData = { roomName: roomName, capacity: Number(roomCapacity) };
+                await createRoom(requestData);
                 setSnackbar({ open: true, message: 'Room created successfully', severity: 'success' });
             }
             fetchRooms();
             handleCloseDialog();
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            setSnackbar({ open: true, message: 'Failed to save room', severity: 'error' });
+            const errorMessage = err?.response?.data?.message || 'Failed to save room';
+            setSnackbar({ open: true, message: errorMessage, severity: 'error' });
         }
     };
 
@@ -119,17 +125,21 @@ const RoomPage = () => {
     const handleConfirmDelete = async () => {
         if (roomToDelete !== null) {
             try {
-                await deleteRoom(roomToDelete);
-                setSnackbar({ open: true, message: 'Room deleted successfully', severity: 'success' });
-                fetchRooms();
-            } catch (err) {
+                // Delete not available in API
+                setSnackbar({ open: true, message: 'Delete room feature is not available', severity: 'error' });
+            } catch (err: any) {
                 console.error(err);
-                setSnackbar({ open: true, message: 'Failed to delete room', severity: 'error' });
+                const errorMessage = err?.response?.data?.message || 'Failed to delete room';
+                setSnackbar({ open: true, message: errorMessage, severity: 'error' });
             } finally {
                 setDeleteConfirmOpen(false);
                 setRoomToDelete(null);
             }
         }
+    };
+
+    const handleViewDetail = (roomId: number) => {
+        navigate(`/rooms/${roomId}`);
     };
 
     return (
@@ -165,21 +175,31 @@ const RoomPage = () => {
                         </TableHead>
                         <TableBody>
                             {rooms.map((room) => (
-                                <TableRow key={room.id} hover>
-                                    <TableCell>{room.id}</TableCell>
-                                    <TableCell>{room.name}</TableCell>
+                                <TableRow key={room.roomId} hover>
+                                    <TableCell>{room.roomId}</TableCell>
+                                    <TableCell>{room.roomName}</TableCell>
                                     <TableCell>{room.capacity}</TableCell>
                                     <TableCell sx={{ textAlign: 'center' }}>
+                                        <IconButton
+                                            color="info"
+                                            onClick={() => handleViewDetail(room.roomId)}
+                                            sx={{ mr: 1 }}
+                                            title="View Details"
+                                        >
+                                            <VisibilityIcon />
+                                        </IconButton>
                                         <IconButton
                                             color="primary"
                                             onClick={() => handleOpenDialog(room)}
                                             sx={{ mr: 1 }}
+                                            title="Edit Room"
                                         >
                                             <EditIcon />
                                         </IconButton>
                                         <IconButton
                                             color="error"
-                                            onClick={() => handleDeleteClick(room.id)}
+                                            onClick={() => handleDeleteClick(room.roomId)}
+                                            title="Delete Room"
                                         >
                                             <DeleteIcon />
                                         </IconButton>
@@ -243,9 +263,9 @@ const RoomPage = () => {
             {/* Snackbar for notifications */}
             <Snackbar
                 open={snackbar.open}
-                autoHideDuration={6000}
+                autoHideDuration={2000}
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
                 <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>
                     {snackbar.message}

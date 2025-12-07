@@ -46,15 +46,11 @@ import {
   getCourseFilterList,
   getLecturerFilterList,
   getRoomFilterList,
-  updateClass,
   addStudentToClass,
 } from "../../services/class_service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEdit,
-  faFilter,
-  faLock,
-  faLockOpen,
   faMagnifyingGlass,
   faTrash,
   faUserPlus,
@@ -265,23 +261,23 @@ const ClassListPage: React.FC = () => {
     fetchData();
   };
 
-  const handleChangeClassStatus = async (classId: number) => {
-    setTargetClassId(classId);
-    try {
-      const res = await changeClassStatus(classId);
+  // const handleChangeClassStatus = async (classId: number) => {
+  //   setTargetClassId(classId);
+  //   try {
+  //     const res = await changeClassStatus(classId);
 
-      if (res.data) {
-        setSuggestionData(res.data);
-        setOpenSuggestionDialog(true);
-      } else {
-        setSuccessMsg(res.message || "Đổi trạng thái thành công!");
-        setOpenSnackbar(true);
-        fetchData();
-      }
-    } catch (error: any) {
-      console.log("Có lỗi xảy ra: ", error);
-    }
-  };
+  //     if (res.data) {
+  //       setSuggestionData(res.data);
+  //       setOpenSuggestionDialog(true);
+  //     } else {
+  //       setSuccessMsg(res.message || "Đổi trạng thái thành công!");
+  //       setOpenSnackbar(true);
+  //       fetchData();
+  //     }
+  //   } catch (error: any) {
+  //     console.log("Có lỗi xảy ra: ", error);
+  //   }
+  // };
 
   const handleSelectAlternative = (alternative: ScheduleAlternative) => {
     setOpenSuggestionDialog(false);
@@ -664,8 +660,6 @@ const ClassListPage: React.FC = () => {
                           <IconButton
                             size="small"
                             color="error"
-
-                          // onClick={() => handleDelete(lop.malop)}
                           >
                             <FontAwesomeIcon icon={faTrash} />
                           </IconButton>

@@ -13,6 +13,7 @@ import Timetable from "../pages/admin/schedule";
 import EditClass from "../pages/admin/edit_class";
 import Student from "../pages/admin/student";
 import StudentDetail from "../pages/admin/student_detail";
+import AddStudentPage from "../pages/admin/add_student";
 import PromotionListPage from "../pages/admin/promotion_list";
 import AddPromotionPage from "../pages/admin/add_promotion";
 import PromotionDetailPage from "../pages/admin/promotion_detail";
@@ -29,6 +30,7 @@ import TeacherProfile from "../pages/teacher/profile";
 import TeacherScoreManagement from "../pages/teacher/score_management";
 import CategoryPage from "../pages/admin/category_page";
 import RoomPage from "../pages/admin/room_page";
+import RoomDetailPage from "../pages/admin/room_detail";
 import Unauthorized from "../pages/unauthorized";
 
 function HomeRedirect() {
@@ -71,7 +73,8 @@ function AppRoutes() {
                 <Route path="/schedule" element={<Timetable />}></Route>
                 <Route path="/class/edit/:id" element={<EditClass />}></Route>
                 <Route path="/students" element={<Student />}></Route>
-                <Route path="/student/:id" element={<StudentDetail />}></Route>
+                <Route path="/students/add" element={<AddStudentPage />}></Route>
+                <Route path="/students/:id" element={<StudentDetail />}></Route>
                 <Route path="/promotions" element={<PromotionListPage />}></Route>
                 <Route path="/promotions/add" element={<AddPromotionPage />}></Route>
                 <Route path="/promotions/:id" element={<PromotionDetailPage />}></Route>
@@ -80,6 +83,7 @@ function AppRoutes() {
                 <Route path="/teachers/:id" element={<TeacherDetailPage />}></Route>
                 <Route path="/categories" element={<CategoryPage />}></Route>
                 <Route path="/rooms" element={<RoomPage />}></Route>
+                <Route path="/rooms/:id" element={<RoomDetailPage />}></Route>
               </Route>
             </Route>
           </Route>

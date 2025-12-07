@@ -141,9 +141,8 @@ const MOCK_DASHBOARD_DATA: DashboardData = {
 // --- API Service Functions ---
 
 export const getDashboardStats = async (): Promise<DashboardStatsResponse> => {
-    const response = await axiosClient.get<DashboardStatsResponse>("/admin/dashboard/stats");
-    console.log("Fetched dashboard stats:", response.data);
-    return response.data;
+    const response = await axiosClient.get<{ code: number; message: string; data: DashboardStatsResponse }>("/admin/dashboard/stats");
+    return response.data.data;
 };
 
 export const getRecentActivities = async (limit: number = 10): Promise<ActivityResponse[]> => {

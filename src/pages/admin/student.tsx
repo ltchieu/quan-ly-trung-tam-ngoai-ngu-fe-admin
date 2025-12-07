@@ -14,31 +14,34 @@ import {
   TableRow,
   TablePagination,
   IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
   Chip,
   Avatar,
   Breadcrumbs,
   Link,
+  Snackbar,
+  Alert,
+  Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { StudentModel } from "../../model/student_model";
+import AddIcon from "@mui/icons-material/Add";
+import { StudentAdminResponse } from "../../model/student_model";
 import { getAllStudents } from "../../services/student_service";
 import { useNavigate } from "react-router-dom";
+import useDebounce from "../../hook/useDebounce";
 
 const Student: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [students, setStudents] = useState<StudentModel[]>([]);
-  const [totalItems, setTotalItems] = useState(0);
+  const [students, setStudents] = useState<StudentAdminResponse[]>([]);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [genderFilter, setGenderFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const navigate = useNavigate();
 
   const cardContainerStyle = {
@@ -57,30 +60,21 @@ const Student: React.FC = () => {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      // In a real app, pass filters to the API
-      const res = await getAllStudents(page, rowsPerPage);
-      let data = res.data.data.students;
+      const response = await getAllStudents(
+        page,
+        rowsPerPage,
+        debouncedSearchTerm
+      );
 
-      // Client-side filtering for mock data
-      if (genderFilter !== "all") {
-        const isMale = genderFilter === "male";
-        data = data.filter((s) => s.gioitinh === isMale);
+      if (response.code === 1000 && response.data) {
+        setStudents(response.data.content);
+        setTotalElements(response.data.totalElements);
+        setTotalPages(response.data.totalPages);
       }
-
-      if (searchTerm) {
-        const lowerTerm = searchTerm.toLowerCase();
-        data = data.filter(
-          (s) =>
-            s.hoten.toLowerCase().includes(lowerTerm) ||
-            s.email.toLowerCase().includes(lowerTerm) ||
-            s.sdt.includes(lowerTerm)
-        );
-      }
-
-      setStudents(data);
-      setTotalItems(res.data.data.totalItems);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Lỗi khi tải danh sách học viên:", error);
+      setErrorMsg(error.message || "Có lỗi xảy ra khi tải dữ liệu");
+      setOpenSnackbar(true);
     } finally {
       setLoading(false);
     }
@@ -88,7 +82,7 @@ const Student: React.FC = () => {
 
   useEffect(() => {
     fetchStudents();
-  }, [page, rowsPerPage, genderFilter, searchTerm]);
+  }, [page, rowsPerPage, debouncedSearchTerm]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -101,18 +95,13 @@ const Student: React.FC = () => {
     setPage(0);
   };
 
-  const handleGenderChange = (event: SelectChangeEvent) => {
-    setGenderFilter(event.target.value);
-    setPage(0);
-  };
-
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
     setPage(0);
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
+  if (loading && students.length === 0) {
+    return <Box sx={{ p: 3 }}>Đang tải...</Box>;
   }
 
   return (
@@ -138,44 +127,46 @@ const Student: React.FC = () => {
               Danh sách và thông tin chi tiết học viên
             </Typography>
           </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate("/students/add")}
+            sx={{
+              backgroundColor: "#635bff",
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 600,
+              boxShadow: "0px 4px 12px rgba(99, 91, 255, 0.2)",
+              "&:hover": {
+                backgroundColor: "#5348e8",
+              }
+            }}
+          >
+            Thêm học viên
+          </Button>
         </Stack>
 
         {/* Filters */}
         <Card sx={{ ...cardContainerStyle, p: 3 }}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              fullWidth
-              placeholder="Tìm kiếm theo tên, email, số điện thoại..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                maxWidth: 500,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "12px",
-                }
-              }}
-            />
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Giới tính</InputLabel>
-              <Select
-                value={genderFilter}
-                label="Giới tính"
-                onChange={handleGenderChange}
-                sx={{ borderRadius: "12px" }}
-              >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="male">Nam</MenuItem>
-                <MenuItem value="female">Nữ</MenuItem>
-              </Select>
-            </FormControl>
-          </Stack>
+          <TextField
+            fullWidth
+            placeholder="Tìm kiếm theo tên, email, số điện thoại..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              maxWidth: 500,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "12px",
+              }
+            }}
+          />
         </Card>
 
         {/* Table */}
@@ -185,9 +176,10 @@ const Student: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={headerCellStyle}>Học viên</TableCell>
-                  <TableCell sx={headerCellStyle}>Giới tính</TableCell>
                   <TableCell sx={headerCellStyle}>Liên hệ</TableCell>
+                  <TableCell sx={headerCellStyle}>Địa chỉ</TableCell>
                   <TableCell sx={headerCellStyle}>Trình độ</TableCell>
+                  <TableCell sx={headerCellStyle}>Số lớp</TableCell>
                   <TableCell sx={headerCellStyle} align="center">Thao tác</TableCell>
                 </TableRow>
               </TableHead>
@@ -195,16 +187,21 @@ const Student: React.FC = () => {
                 {students.length > 0 ? (
                   students.map((student) => (
                     <TableRow
-                      key={student.mahocvien}
+                      key={student.id}
                       hover
                       sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                     >
                       <TableCell>
                         <Stack direction="row" spacing={2} alignItems="center">
-                          <Avatar src={student.hinhanh} alt={student.hoten} />
+                          <Avatar 
+                            src={student.avatarUrl || undefined} 
+                            alt={student.fullName}
+                          >
+                            {student.fullName.charAt(0).toUpperCase()}
+                          </Avatar>
                           <Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                              {student.hoten}
+                              {student.fullName}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               {student.email}
@@ -213,28 +210,47 @@ const Student: React.FC = () => {
                         </Stack>
                       </TableCell>
                       <TableCell>
+                        <Typography variant="body2">{student.phoneNumber}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            maxWidth: 200, 
+                            overflow: "hidden", 
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          {student.address || "Chưa cập nhật"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {student.educationLevel ? (
+                          <Chip
+                            label={student.educationLevel}
+                            color="info"
+                            size="small"
+                            sx={{ borderRadius: "6px" }}
+                          />
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            Chưa cập nhật
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <Chip
-                          label={student.gioitinh ? "Nam" : "Nữ"}
+                          label={student.totalClassesEnrolled}
+                          color="primary"
                           size="small"
-                          color={student.gioitinh ? "primary" : "secondary"}
                           variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{student.sdt}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={student.trinhdo}
-                          color="info"
-                          size="small"
-                          sx={{ borderRadius: "6px" }}
                         />
                       </TableCell>
                       <TableCell align="center">
                         <IconButton
                           color="primary"
-                          onClick={() => navigate(`/student/${student.mahocvien}`)}
+                          onClick={() => navigate(`/students/${student.id}`)}
                           sx={{
                             backgroundColor: "rgba(99, 91, 255, 0.08)",
                             "&:hover": { backgroundColor: "rgba(99, 91, 255, 0.16)" }
@@ -247,9 +263,9 @@ const Student: React.FC = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                       <Typography variant="body1" color="text.secondary">
-                        Không tìm thấy học viên nào.
+                        {searchTerm ? "Không tìm thấy học viên phù hợp." : "Không có học viên nào."}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -259,14 +275,28 @@ const Student: React.FC = () => {
           </Box>
           <TablePagination
             component="div"
-            count={totalItems}
+            count={totalElements}
             page={page}
             onPageChange={handleChangePage}
             rowsPerPage={rowsPerPage}
             onRowsPerPageChange={handleChangeRowsPerPage}
             labelRowsPerPage="Số hàng mỗi trang:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} trong tổng số ${count !== -1 ? count : `hơn ${to}`}`
+            }
           />
         </Card>
+
+        <Snackbar
+          open={openSnackbar}
+          autoHideDuration={2000}
+          onClose={() => setOpenSnackbar(false)}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <Alert severity="error" onClose={() => setOpenSnackbar(false)}>
+            {errorMsg}
+          </Alert>
+        </Snackbar>
       </Container>
     </Box>
   );
