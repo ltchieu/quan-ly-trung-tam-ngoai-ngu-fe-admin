@@ -64,9 +64,10 @@ export interface TeacherInfo {
 }
 
 export interface CertificateInfo {
-  certificateId: number;
-  certificateName: string;
-  level: string;
+  certificateId: number;       // ID bằng cấp cụ thể (bảng bangcap) - để tracking
+  degreeTypeId: number;        // ID loại bằng cấp (bảng loaibangcap)
+  degreeTypeName: string;      // Tên loại: IELTS, TOEIC, TOEFL...
+  level: string;               // Trình độ: Band 8.0, 950 điểm...
 }
 
 export interface LecturerResponse {
@@ -134,4 +135,26 @@ export interface LecturerDashboardStatsResponse {
   activeClasses: ActiveClass[];
   reminders: Reminder[];
   attendanceStats: AttendanceStats[];
+}
+
+// Degree Models
+export interface DegreeDTO {
+  id: number;
+  name: string;
+}
+
+// Lecturer Request
+export interface CertificateRequest {
+  degreeTypeId: number;  // ID của loại bằng cấp (bảng loaibangcap: IELTS, TOEIC...)
+  level?: string;        // Trình độ cụ thể (VD: "Band 8.0", "950 điểm", "Giỏi")
+}
+
+export interface LecturerRequest {
+  fullName: string;
+  dateOfBirth: string;      // Format: "YYYY-MM-DD"
+  imagePath?: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  certificates?: CertificateRequest[];
 }

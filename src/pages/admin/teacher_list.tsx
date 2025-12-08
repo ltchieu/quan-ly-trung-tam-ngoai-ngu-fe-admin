@@ -13,8 +13,6 @@ import {
   TableRow,
   IconButton,
   Stack,
-  TextField,
-  InputAdornment,
   Avatar,
   Breadcrumbs,
   Link,
@@ -24,38 +22,36 @@ import {
   Tooltip,
   Alert,
   Snackbar,
+  TableSortLabel,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import DeleteIcon from "@mui/icons-material/Delete";
-import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate } from "react-router-dom";
 import { LecturerResponse } from "../../model/teacher_model";
-import { getAllLecturersPaginated, deleteTeacher } from "../../services/teacher_service";
-import useDebounce from "../../hook/useDebounce";
+import { getAllLecturersPaginated, deleteLecturer } from "../../services/teacher_service";
 
 const TeacherListPage: React.FC = () => {
   const navigate = useNavigate();
   const [teachers, setTeachers] = useState<LecturerResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
+  const [sortBy, setSortBy] = useState<string>("lecturerId");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   
   // Snackbar state
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">("success");
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);
-
   const fetchTeachers = async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await getAllLecturersPaginated(page, rowsPerPage, "lecturerId", "asc");
+      const result = await getAllLecturersPaginated(page, rowsPerPage, sortBy, sortDirection);
       setTeachers(result.lecturers);
       setTotal(result.totalItems);
     } catch (error: any) {
@@ -68,12 +64,7 @@ const TeacherListPage: React.FC = () => {
 
   useEffect(() => {
     fetchTeachers();
-  }, [page, rowsPerPage, debouncedSearchTerm]);
-
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-    setPage(0);
-  };
+  }, [page, rowsPerPage, sortBy, sortDirection]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -87,7 +78,7 @@ const TeacherListPage: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa giảng viên này?")) {
       try {
-        await deleteTeacher(id);
+        await deleteLecturer(id);
         setSnackbarMsg("Xóa giảng viên thành công!");
         setSnackbarSeverity("success");
         setOpenSnackbar(true);
@@ -101,6 +92,12 @@ const TeacherListPage: React.FC = () => {
     }
   };
 
+  const handleSort = (property: string) => {
+    const isAsc = sortBy === property && sortDirection === "asc";
+    setSortDirection(isAsc ? "desc" : "asc");
+    setSortBy(property);
+    setPage(0);
+  };
 
   return (
     <Box sx={{ bgcolor: "#f8f9fa", minHeight: "100vh", py: 4 }}>
@@ -132,9 +129,6 @@ const TeacherListPage: React.FC = () => {
             <Typography variant="h4" fontWeight="bold" gutterBottom>
               Danh sách Giảng viên
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Quản lý thông tin và chứng chỉ của giảng viên
-            </Typography>
           </Box>
           <Button
             variant="contained"
@@ -160,35 +154,6 @@ const TeacherListPage: React.FC = () => {
           </Alert>
         )}
 
-        {/* Search Bar */}
-        <Card 
-          sx={{ 
-            p: 2.5, 
-            mb: 3,
-            boxShadow: "rgba(0, 0, 0, 0.04) 0px 5px 22px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px",
-            borderRadius: 3,
-          }}
-        >
-          <TextField
-            fullWidth
-            placeholder="Tìm kiếm theo tên, email hoặc số điện thoại..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                backgroundColor: "#fff",
-              },
-            }}
-          />
-        </Card>
-
         {/* Data Table */}
         <Card
           sx={{
@@ -202,7 +167,13 @@ const TeacherListPage: React.FC = () => {
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#f9fafb" }}>
                   <TableCell sx={{ fontWeight: 600, color: "#667085" }}>
-                    Giảng viên
+                    <TableSortLabel
+                      active={sortBy === "fullName"}
+                      direction={sortBy === "fullName" ? sortDirection : "asc"}
+                      onClick={() => handleSort("fullName")}
+                    >
+                      Giảng viên
+                    </TableSortLabel>
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, color: "#667085" }}>
                     Liên hệ
@@ -229,9 +200,7 @@ const TeacherListPage: React.FC = () => {
                   <TableRow>
                     <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
                       <Typography variant="body1" color="text.secondary">
-                        {searchTerm 
-                          ? "Không tìm thấy giảng viên phù hợp." 
-                          : "Chưa có giảng viên nào."}
+                        Chưa có giảng viên nào.
                       </Typography>
                     </TableCell>
                   </TableRow>

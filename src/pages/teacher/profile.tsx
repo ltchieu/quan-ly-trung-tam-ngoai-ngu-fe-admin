@@ -29,9 +29,9 @@ import {
     Delete,
 } from "@mui/icons-material";
 import { useAuth } from "../../hook/useAuth";
-import { getTeacherInfoById, getDegreeTypesMock, addTeacherDegreeMock, deleteTeacherDegreeMock } from "../../services/teacher_service";
+import { getTeacherInfoById, getDegrees, updateMyLecturerInfo } from "../../services/teacher_service";
 
-import { LoaiBangCap, TeacherInfo, QualificationDTO } from "../../model/teacher_model";
+import { TeacherInfo, DegreeDTO } from "../../model/teacher_model";
 import { MenuItem, Select, InputLabel, FormControl } from "@mui/material";
 import { getImageUrl, uploadImage } from "../../services/file_service";
 
@@ -41,7 +41,7 @@ const TeacherProfile: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [saving, setSaving] = useState<boolean>(false);
     const [isEditing, setIsEditing] = useState<boolean>(false);
-    const [notification, setNotification] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    const [notification, setNotification] = useState<{ open: boolean; message: string; severity: "success" | "error" | "warning" }>({
         open: false,
         message: "",
         severity: "success",
@@ -49,24 +49,40 @@ const TeacherProfile: React.FC = () => {
 
     // Degree management
     const [openDegreeDialog, setOpenDegreeDialog] = useState(false);
-    const [degreeTypes, setDegreeTypes] = useState<LoaiBangCap[]>([]);
+    const [degreeTypes, setDegreeTypes] = useState<DegreeDTO[]>([]);
     const [newDegreeType, setNewDegreeType] = useState<number | "">("");
     const [newDegreeLevel, setNewDegreeLevel] = useState("");
+    const [certificates, setCertificates] = useState<{ degreeId: number; degreeTypeName: string; level: string; isNew?: boolean }[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const [types] = await Promise.all([
-                    getDegreeTypesMock(),
-                ]);
+                const types = await getDegrees();
                 setDegreeTypes(types);
 
                 const info = await getTeacherInfoById();
                 setProfile(info);
+                
+                // Initialize certificates from profile
+                if (info.qualifications && info.qualifications.length > 0) {
+                    setCertificates(
+                        info.qualifications.map(qual => ({
+                            degreeId: qual.degreeId,
+                            degreeTypeName: qual.degreeName,
+                            level: qual.level,
+                            isNew: false,
+                        }))
+                    );
+                }
 
             } catch (error) {
                 console.error("Error fetching data:", error);
+                setNotification({
+                    open: true,
+                    message: "Không thể tải thông tin. Vui lòng thử lại.",
+                    severity: "error",
+                });
             } finally {
                 setLoading(false);
             }
@@ -105,75 +121,104 @@ const TeacherProfile: React.FC = () => {
     };
 
     const handleSave = async () => {
-        // if (profile) {
-        //     try {
-        //         setSaving(true);
-        //         await updateTeacherProfileMock(profile);
-        //         setNotification({
-        //             open: true,
-        //             message: "Cập nhật thông tin thành công!",
-        //             severity: "success",
-        //         });
-        //         setIsEditing(false);
-        //     } catch (error) {
-        //         console.error("Error updating profile:", error);
-        //         setNotification({
-        //             open: true,
-        //             message: "Cập nhật thất bại. Vui lòng thử lại.",
-        //             severity: "error",
-        //         });
-        //     } finally {
-        //         setSaving(false);
-        //     }
-        // }
-    };
-
-
-
-    const handleAddDegree = async () => {
-        if (profile && newDegreeType && newDegreeLevel.trim()) {
-            try {
-                const degreeToAdd: any = {
-                    maGiangVien: profile.lecturerId,
-                    maLoai: Number(newDegreeType),
-                    trinhDo: newDegreeLevel.trim(),
-                };
-                const addedDegree = await addTeacherDegreeMock(degreeToAdd);
-
-                const newQualification: QualificationDTO = {
-                    degreeId: addedDegree.ma,
-                    degreeName: addedDegree.loaiBangCap?.ten || "Unknown",
-                    level: addedDegree.trinhDo
-                };
-
-                // Update local profile state
-                const updatedQualifications = [...(profile.qualifications || []), newQualification];
-                setProfile({ ...profile, qualifications: updatedQualifications });
-
-                setNewDegreeType("");
-                setNewDegreeLevel("");
-                setOpenDegreeDialog(false);
-                setNotification({ open: true, message: "Thêm bằng cấp thành công", severity: "success" });
-            } catch (error) {
-                console.error("Failed to add degree", error);
-                setNotification({ open: true, message: "Thêm bằng cấp thất bại", severity: "error" });
-            }
-        }
-    };
-
-    const handleRemoveDegree = async (degreeId: number) => {
         if (profile) {
             try {
-                await deleteTeacherDegreeMock(degreeId);
-                // Update local profile state
-                const updatedQualifications = (profile.qualifications || []).filter(d => d.degreeId !== degreeId);
-                setProfile({ ...profile, qualifications: updatedQualifications });
-                setNotification({ open: true, message: "Xóa bằng cấp thành công", severity: "success" });
-            } catch (error) {
-                console.error("Failed to delete degree", error);
-                setNotification({ open: true, message: "Xóa bằng cấp thất bại", severity: "error" });
+                setSaving(true);
+                
+                // Format ALL certificates (both existing and new) - REPLACE ALL strategy
+                // Backend will replace all existing certificates with this list
+                const allCertificates = certificates
+                    .filter(c => c.degreeId && c.level)
+                    .map(c => ({
+                        degreeTypeId: c.degreeId,
+                        level: c.level,
+                    }));
+
+                const updateRequest = {
+                    fullName: profile.fullName,
+                    dateOfBirth: profile.dateOfBirth,
+                    phoneNumber: profile.phoneNumber,
+                    imagePath: profile.imagePath,
+                    // Send ALL certificates - backend uses REPLACE ALL strategy
+                    certificates: allCertificates.length > 0 ? allCertificates : [],
+                };
+
+                await updateMyLecturerInfo(updateRequest);
+                
+                setNotification({
+                    open: true,
+                    message: "Cập nhật thông tin thành công!",
+                    severity: "success",
+                });
+                setIsEditing(false);
+                
+                // Reload profile data
+                const updatedInfo = await getTeacherInfoById();
+                setProfile(updatedInfo);
+                if (updatedInfo.qualifications) {
+                    setCertificates(
+                        updatedInfo.qualifications.map(qual => ({
+                            degreeId: qual.degreeId,
+                            degreeTypeName: qual.degreeName,
+                            level: qual.level,
+                            isNew: false,
+                        }))
+                    );
+                }
+            } catch (error: any) {
+                console.error("Error updating profile:", error);
+                setNotification({
+                    open: true,
+                    message: error.message || "Cập nhật thất bại. Vui lòng thử lại.",
+                    severity: "error",
+                });
+            } finally {
+                setSaving(false);
             }
         }
+    };
+
+
+
+    const handleAddDegree = () => {
+        if (newDegreeType && newDegreeLevel.trim()) {
+            const selectedDegree = degreeTypes.find(d => d.id === Number(newDegreeType));
+            if (!selectedDegree) return;
+
+            const newCertificate = {
+                degreeId: selectedDegree.id,
+                degreeTypeName: selectedDegree.name,
+                level: newDegreeLevel.trim(),
+                isNew: true,
+            };
+
+            setCertificates([...certificates, newCertificate]);
+            setNewDegreeType("");
+            setNewDegreeLevel("");
+            setOpenDegreeDialog(false);
+            setNotification({ 
+                open: true, 
+                message: "Đã thêm bằng cấp. Nhớ nhấn 'Lưu thay đổi' để cập nhật!", 
+                severity: "success" 
+            });
+        } else {
+            setNotification({ 
+                open: true, 
+                message: "Vui lòng chọn loại bằng cấp và nhập trình độ", 
+                severity: "error" 
+            });
+        }
+    };
+
+    const handleRemoveDegree = (index: number) => {
+        // With REPLACE ALL strategy, we can remove any certificate (existing or new)
+        // The entire list will be sent to backend when saving
+        setCertificates(certificates.filter((_, i) => i !== index));
+        setNotification({ 
+            open: true, 
+            message: "Đã xóa bằng cấp. Nhớ nhấn 'Lưu thay đổi' để cập nhật!", 
+            severity: "warning" 
+        });
     };
 
     const handleCloseNotification = () => {
@@ -183,8 +228,6 @@ const TeacherProfile: React.FC = () => {
     if (loading || !profile) {
         return <Box sx={{ p: 3 }}>Đang tải thông tin...</Box>;
     }
-
-    const degrees = profile.qualifications || [];
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -247,13 +290,13 @@ const TeacherProfile: React.FC = () => {
                                 Bằng cấp & Chứng chỉ
                             </Typography>
                             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                                {degrees.map((degree) => (
+                                {certificates.map((cert, index) => (
                                     <Chip
-                                        key={degree.degreeId}
+                                        key={index}
                                         icon={<School />}
-                                        label={`${degree.degreeName} - ${degree.level}`}
-                                        onDelete={isEditing ? () => handleRemoveDegree(degree.degreeId) : undefined}
-                                        color="secondary"
+                                        label={`${cert.degreeTypeName} - ${cert.level}`}
+                                        onDelete={isEditing ? () => handleRemoveDegree(index) : undefined}
+                                        color={cert.isNew ? "warning" : "default"}
                                         variant="outlined"
                                     />
                                 ))}
@@ -285,7 +328,7 @@ const TeacherProfile: React.FC = () => {
                                     <TextField
                                         fullWidth
                                         label="Họ và tên"
-                                        name="hoten"
+                                        name="fullName"
                                         value={profile.fullName}
                                         onChange={handleInputChange}
                                         disabled={!isEditing}
@@ -296,7 +339,7 @@ const TeacherProfile: React.FC = () => {
                                     <TextField
                                         fullWidth
                                         label="Ngày sinh"
-                                        name="ngaysinh"
+                                        name="dateOfBirth"
                                         type="date"
                                         value={profile.dateOfBirth}
                                         onChange={handleInputChange}
@@ -309,7 +352,7 @@ const TeacherProfile: React.FC = () => {
                                     <TextField
                                         fullWidth
                                         label="Số điện thoại"
-                                        name="sdt"
+                                        name="phoneNumber"
                                         value={profile.phoneNumber}
                                         onChange={handleInputChange}
                                         disabled={!isEditing}
@@ -346,8 +389,8 @@ const TeacherProfile: React.FC = () => {
                             onChange={(e) => setNewDegreeType(Number(e.target.value))}
                         >
                             {degreeTypes.map((type) => (
-                                <MenuItem key={type.maLoai} value={type.maLoai}>
-                                    {type.ten}
+                                <MenuItem key={type.id} value={type.id}>
+                                    {type.name}
                                 </MenuItem>
                             ))}
                         </Select>

@@ -35,13 +35,14 @@ import * as Yup from "yup";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
-import { getLecturerDetail, updateLecturer, getAllDegrees, DegreeOption } from "../../services/teacher_service";
-import { LecturerResponse } from "../../model/teacher_model";
+import { getLecturerDetail, updateLecturer, getDegrees } from "../../services/teacher_service";
+import { LecturerResponse, DegreeDTO } from "../../model/teacher_model";
 import { getImageUrl, uploadImage } from "../../services/file_service";
 
 interface CertificateFormData {
   degreeId?: number;
-  certificateName?: string;
+  degreeTypeId?: number;
+  degreeTypeName?: string;
   level: string;
   isNew?: boolean;
 }
@@ -52,7 +53,7 @@ const TeacherDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [teacherInfo, setTeacherInfo] = useState<LecturerResponse | null>(null);
-  const [degrees, setDegrees] = useState<DegreeOption[]>([]);
+  const [degrees, setDegrees] = useState<DegreeDTO[]>([]);
   const [certificates, setCertificates] = useState<CertificateFormData[]>([]);
   
   // Dialog state
@@ -93,7 +94,7 @@ const TeacherDetailPage: React.FC = () => {
         const newCertificates = certificates
           .filter(c => c.degreeId && c.level)
           .map(c => ({
-            degreeId: c.degreeId!,
+            degreeTypeId: c.degreeId!,  // Backend expects degreeTypeId
             level: c.level,
           }));
 
@@ -144,8 +145,8 @@ const TeacherDetailPage: React.FC = () => {
 
       setLoading(true);
       try {
-        // Load degrees
-        const degreesList = await getAllDegrees();
+        // Load degrees from API
+        const degreesList = await getDegrees();
         setDegrees(degreesList);
 
         // Load teacher info
@@ -165,7 +166,8 @@ const TeacherDetailPage: React.FC = () => {
           if (response.data.certificates && response.data.certificates.length > 0) {
             setCertificates(
               response.data.certificates.map(cert => ({
-                certificateName: cert.certificateName,
+                degreeTypeId: cert.degreeTypeId,
+                degreeTypeName: cert.degreeTypeName,
                 level: cert.level,
                 isNew: false,
               }))
@@ -239,16 +241,16 @@ const TeacherDetailPage: React.FC = () => {
   };
 
   const getCertificateName = (cert: CertificateFormData): string => {
-    // Nếu có certificateName (từ API) thì dùng luôn
-    if (cert.certificateName) {
-      return cert.certificateName;
+    // Nếu có degreeTypeName (từ API) thì dùng luôn
+    if (cert.degreeTypeName) {
+      return cert.degreeTypeName;
     }
     // Nếu là certificate mới (có degreeId) thì tìm tên từ degrees list
     if (cert.degreeId) {
-      const degree = degrees.find(d => d.degreeId === cert.degreeId);
-      return degree ? degree.degreeName : "Unknown";
+      const degree = degrees.find(d => d.id === cert.degreeId);
+      return degree ? degree.name : "Không rõ";
     }
-    return "Unknown";
+    return "Không rõ";
   };
 
   if (loading) {
@@ -589,8 +591,8 @@ const TeacherDetailPage: React.FC = () => {
                     <em>Chọn loại chứng chỉ</em>
                   </MenuItem>
                   {degrees.map((degree) => (
-                    <MenuItem key={degree.degreeId} value={degree.degreeId}>
-                      {degree.degreeName}
+                    <MenuItem key={degree.id} value={degree.id}>
+                      {degree.name}
                     </MenuItem>
                   ))}
                 </Select>
