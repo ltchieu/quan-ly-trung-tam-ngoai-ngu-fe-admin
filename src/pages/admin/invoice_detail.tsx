@@ -74,9 +74,6 @@ const InvoiceDetailPage: React.FC = () => {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
     });
   };
 
@@ -125,7 +122,6 @@ const InvoiceDetailPage: React.FC = () => {
       {/* Header */}
       <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Typography variant="h3" fontWeight="bold">
-          <FontAwesomeIcon icon={faReceipt} style={{ marginRight: 16 }} />
           Chi tiết hóa đơn #{invoice.invoiceId}
         </Typography>
         <Button
@@ -148,8 +144,8 @@ const InvoiceDetailPage: React.FC = () => {
 
             <Grid container spacing={3}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={1}>
+                <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "left" }}>
+                  <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
                     <FontAwesomeIcon icon={faUser} />
                     Học viên
                   </Typography>
@@ -163,8 +159,8 @@ const InvoiceDetailPage: React.FC = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={1}>
+                <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "left" }}>
+                  <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
                     <FontAwesomeIcon icon={faCalendar} />
                     Ngày tạo
                   </Typography>
@@ -175,8 +171,8 @@ const InvoiceDetailPage: React.FC = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={1}>
+                <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+                  <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
                     <FontAwesomeIcon icon={faCreditCard} />
                     Phương thức thanh toán
                   </Typography>
@@ -189,8 +185,8 @@ const InvoiceDetailPage: React.FC = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={1}>
+                <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+                  <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
                     {invoice.status ? <FontAwesomeIcon icon={faCheckCircle} /> : <FontAwesomeIcon icon={faHourglassHalf} />}
                     Trạng thái
                   </Typography>
@@ -250,7 +246,7 @@ const InvoiceDetailPage: React.FC = () => {
                           </Typography>
                         </TableCell>
                       </TableRow>
-                      {detail.promotionsApplied.length > 0 && (
+                      {detail.promotionsApplied && detail.promotionsApplied.length > 0 && (
                         <TableRow>
                           <TableCell colSpan={5} sx={{ py: 1, backgroundColor: "#f9fafb" }}>
                             <Box sx={{ pl: 2 }}>
@@ -260,7 +256,7 @@ const InvoiceDetailPage: React.FC = () => {
                               {detail.promotionsApplied.map((promo) => (
                                 <Box key={promo.promotionId} sx={{ ml: 2, mt: 0.5 }}>
                                   <Typography variant="caption" color="success.main">
-                                    • {promo.promotionName} ({promo.promotionType}): -{promo.discountPercent}% = 
+                                    {promo.promotionName} ({promo.promotionType}): -{promo.discountPercent}% = 
                                     {formatCurrency(promo.discountAmount)}
                                   </Typography>
                                 </Box>
@@ -291,16 +287,16 @@ const InvoiceDetailPage: React.FC = () => {
                   Tổng giá gốc
                 </Typography>
                 <Typography variant="body2" fontWeight="bold">
-                  {formatCurrency(invoice.totalOriginalPrice)}
+                  {formatCurrency(invoice.totalOriginalPrice || 0)}
                 </Typography>
               </Box>
 
               <Divider sx={{ my: 2 }} />
 
-              {invoice.courseDiscountAmount > 0 && (
+              {invoice.courseDiscountAmount && invoice.courseDiscountAmount > 0 && (
                 <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
                   <Typography variant="body2" color="success.main">
-                    Giảm khóa học đơn ({invoice.courseDiscountPercent}%)
+                    Giảm khóa học đơn ({invoice.courseDiscountPercent || 0}%)
                   </Typography>
                   <Typography variant="body2" color="success.main">
                     -{formatCurrency(invoice.courseDiscountAmount)}
@@ -308,10 +304,10 @@ const InvoiceDetailPage: React.FC = () => {
                 </Box>
               )}
 
-              {invoice.comboDiscountAmount > 0 && (
+              {invoice.comboDiscountAmount && invoice.comboDiscountAmount > 0 && (
                 <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
                   <Typography variant="body2" color="success.main">
-                    Giảm combo ({invoice.comboDiscountPercent}%)
+                    Giảm combo ({invoice.comboDiscountPercent || 0}%)
                   </Typography>
                   <Typography variant="body2" color="success.main">
                     -{formatCurrency(invoice.comboDiscountAmount)}
@@ -319,10 +315,10 @@ const InvoiceDetailPage: React.FC = () => {
                 </Box>
               )}
 
-              {invoice.returningDiscountAmount > 0 && (
+              {invoice.returningDiscountAmount && invoice.returningDiscountAmount > 0 && (
                 <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
                   <Typography variant="body2" color="success.main">
-                    Giảm học viên cũ ({invoice.returningDiscountPercent}%)
+                    Giảm học viên cũ ({invoice.returningDiscountPercent || 0}%)
                   </Typography>
                   <Typography variant="body2" color="success.main">
                     -{formatCurrency(invoice.returningDiscountAmount)}
@@ -334,10 +330,10 @@ const InvoiceDetailPage: React.FC = () => {
 
               <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
                 <Typography variant="body2" fontWeight="bold" color="error">
-                  Tổng giảm giá ({invoice.totalDiscountPercent}%)
+                  Tổng giảm giá ({invoice.totalDiscountPercent || 0}%)
                 </Typography>
                 <Typography variant="body2" fontWeight="bold" color="error">
-                  -{formatCurrency(invoice.totalDiscountAmount)}
+                  -{formatCurrency(invoice.totalDiscountAmount || 0)}
                 </Typography>
               </Box>
 

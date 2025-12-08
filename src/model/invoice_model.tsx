@@ -2,6 +2,19 @@
  * Invoice Models
  */
 
+// Model for list view (simplified)
+export interface InvoiceListItem {
+  invoiceId: number;
+  dateCreated: string;
+  status: boolean;
+  studentName: string;
+  studentId: string;
+  paymentMethod: string;
+  totalAmount: number;
+  totalDiscountPercent: number | null;
+}
+
+// Model for detail view (full)
 export interface InvoiceResponse {
   invoiceId: number;
   dateCreated: string;
@@ -10,19 +23,19 @@ export interface InvoiceResponse {
   studentId: string;
   paymentMethod: string;
   
-  totalOriginalPrice: number;
+  totalOriginalPrice: number | null;
   
-  courseDiscountPercent: number;
-  courseDiscountAmount: number;
+  courseDiscountPercent: number | null;
+  courseDiscountAmount: number | null;
   
-  comboDiscountPercent: number;
-  comboDiscountAmount: number;
+  comboDiscountPercent: number | null;
+  comboDiscountAmount: number | null;
   
-  returningDiscountPercent: number;
-  returningDiscountAmount: number;
+  returningDiscountPercent: number | null;
+  returningDiscountAmount: number | null;
   
-  totalDiscountPercent: number;
-  totalDiscountAmount: number;
+  totalDiscountPercent: number | null;
+  totalDiscountAmount: number | null;
   totalAmount: number;
   
   details: InvoiceDetailResponse[];
@@ -34,7 +47,7 @@ export interface InvoiceDetailResponse {
   className: string;
   originalPrice: number;
   finalAmount: number;
-  promotionsApplied: PromotionAppliedResponse[];
+  promotionsApplied: PromotionAppliedResponse[] | null;
 }
 
 export interface PromotionAppliedResponse {
@@ -45,11 +58,10 @@ export interface PromotionAppliedResponse {
   discountAmount: number;
 }
 
-// Response từ API phân trang
-export interface InvoiceListResponse {
-  content: InvoiceResponse[];
-  totalElements: number;
+// Response từ API phân trang (InvoicePageResponse)
+export interface InvoicePageResponse {
+  invoices: InvoiceListItem[];
+  currentPage: number;
+  totalItems: number;
   totalPages: number;
-  size: number;
-  number: number;
 }
