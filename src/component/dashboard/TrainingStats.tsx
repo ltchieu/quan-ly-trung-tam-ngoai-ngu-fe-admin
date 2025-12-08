@@ -13,49 +13,49 @@ import {
     Divider,
 } from "@mui/material";
 import {
-    ClassOccupancyData,
+    CourseProgressData,
     ClassScheduleData,
-    AttendanceRateData,
+    EndingClassData,
 } from "../../services/dashboard_service";
 
 interface Props {
-    occupancy: ClassOccupancyData[];
+    progress: CourseProgressData[];
     schedule: ClassScheduleData[];
-    attendance: AttendanceRateData[];
+    endingClasses: EndingClassData[];
 }
 
 export const TrainingStats: React.FC<Props> = ({
-    occupancy,
+    progress,
     schedule,
-    attendance,
+    endingClasses,
 }) => {
     return (
         <Grid container spacing={3}>
-            {/* Class Occupancy */}
+            {/* Course Progress */}
             <Grid size={{ md: 4, xs: 12 }}>
                 <Card sx={{ height: "100%", borderRadius: 4, boxShadow: 3 }}>
-                    <CardHeader title="Tỉ lệ lấp đầy lớp học" />
+                    <CardHeader title="Tiến độ khóa học" />
                     <CardContent>
                         <List dense>
-                            {occupancy.map((item) => (
+                            {progress.map((item) => (
                                 <ListItem key={item.classId} disablePadding sx={{ mb: 2, display: 'block' }}>
                                     <Box display="flex" justifyContent="space-between" mb={0.5}>
                                         <Typography variant="body2" fontWeight="bold">
                                             {item.className}
                                         </Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            {item.enrolled}/{item.capacity} ({item.occupancyRate}%)
+                                            {item.completedSessions}/{item.totalSessions} buổi ({Math.round(item.progressRate)}%)
                                         </Typography>
                                     </Box>
                                     <LinearProgress
                                         variant="determinate"
-                                        value={item.occupancyRate}
+                                        value={item.progressRate}
                                         color={
-                                            item.occupancyRate < 50
+                                            item.progressRate < 50
                                                 ? "error"
-                                                : item.occupancyRate > 90
-                                                    ? "warning"
-                                                    : "success"
+                                                : item.progressRate >= 90
+                                                    ? "success"
+                                                    : "primary"
                                         }
                                         sx={{ height: 8, borderRadius: 4 }}
                                     />
@@ -85,28 +85,28 @@ export const TrainingStats: React.FC<Props> = ({
                 </Card>
             </Grid>
 
-            {/* Attendance Rate */}
+            {/* Ending Classes */}
             <Grid size={{ md: 4, xs: 12 }}>
                 <Card sx={{ height: "100%", borderRadius: 4, boxShadow: 3 }}>
-                    <CardHeader title="Tỉ lệ chuyên cần" />
+                    <CardHeader title="Lớp học sắp kết thúc" />
                     <CardContent>
                         <List dense>
-                            {attendance.map((item) => (
+                            {endingClasses.map((item) => (
                                 <ListItem key={item.classId} disablePadding sx={{ mb: 2, display: 'block' }}>
                                     <Box display="flex" justifyContent="space-between" mb={0.5}>
                                         <Typography variant="body2" fontWeight="bold">
                                             {item.className}
                                         </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {item.attendanceRate}%
+                                        <Typography variant="caption" color={item.remainingSessions <= 2 ? "error.main" : "text.secondary"} fontWeight={item.remainingSessions <= 2 ? "bold" : "normal"}>
+                                            Còn {item.remainingSessions} buổi
                                         </Typography>
                                     </Box>
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={item.attendanceRate}
-                                        color={item.attendanceRate < 80 ? "error" : "success"}
-                                        sx={{ height: 8, borderRadius: 4 }}
-                                    />
+                                    <Typography variant="caption" display="block" color="text.secondary" mb={0.5}>
+                                        {item.courseName}
+                                    </Typography>
+                                    <Typography variant="caption" display="block" color={item.remainingSessions === 0 ? "error.main" : "text.secondary"}>
+                                        Kết thúc: {new Date(item.endDate).toLocaleDateString('vi-VN')}
+                                    </Typography>
                                 </ListItem>
                             ))}
                         </List>

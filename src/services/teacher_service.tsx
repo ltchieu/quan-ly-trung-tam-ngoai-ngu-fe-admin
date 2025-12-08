@@ -1,5 +1,5 @@
 import { axiosClient } from "../api/axios_client";
-import { GiangVien, LoaiBangCap, BangCap, TeacherInfo, LecturerResponse, LecturerListResponse } from "../model/teacher_model";
+import { GiangVien, LoaiBangCap, BangCap, TeacherInfo, LecturerResponse, LecturerListResponse, LecturerDashboardStatsResponse } from "../model/teacher_model";
 import { ApiResponse, Page } from "../model/api_respone";
 
 export const getTeacherInfoById = async (id?: number | string): Promise<TeacherInfo> => {
@@ -25,6 +25,21 @@ export const getTeacherInfoById = async (id?: number | string): Promise<TeacherI
   } catch (error: any) {
     const message = error.response?.data?.message || error.message;
     console.error("Get Teacher Profile API error:", message);
+    throw new Error(message);
+  }
+};
+
+export const getLecturerDashboardStats = async (): Promise<LecturerDashboardStatsResponse> => {
+  try {
+    const response = await axiosClient.get<ApiResponse<LecturerDashboardStatsResponse>>("/lecturers/dashboard/stats");
+    if (response.data && response.data.code === 1000 && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data?.message || "Failed to fetch dashboard stats");
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Get Lecturer Dashboard Stats API error:", message);
     throw new Error(message);
   }
 };

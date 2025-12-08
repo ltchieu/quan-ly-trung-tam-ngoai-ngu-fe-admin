@@ -65,13 +65,16 @@ export interface ScheduleSuggestionResponse {
   alternatives?: ScheduleAlternative[];
 }
 
+export type SessionStatus = "Completed" | "Canceled" | "NotCompleted";
+
 export interface Session {
   sessionId: number;
+  classId: number; // Class ID for cancel/makeup operations
   className: string;
   courseName: string;
   roomName: string;
   instructorName: string;
-  status: boolean;
+  status: SessionStatus;
   note: string;
   schedulePattern: string;
   sessionDate: string;
@@ -94,4 +97,16 @@ export interface WeeklyScheduleResponse {
   weekStart: string;
   weekEnd: string;
   days: DaySchedule[];
+}
+
+export interface SessionDetail {
+  sessionId: number;
+  date: string;
+  note: string;
+  status: string;
+}
+
+export interface SessionCreateRequest {
+  sessionDate: string;
+  note?: string;
 }

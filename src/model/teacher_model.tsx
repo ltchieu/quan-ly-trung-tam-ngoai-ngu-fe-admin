@@ -89,3 +89,49 @@ export interface LecturerListResponse {
   totalItems: number;
   lecturers: LecturerResponse[];
 }
+
+// Dashboard Models
+export interface LecturerDashboardOverview {
+  classesInCharge: number;    // Tổng số lớp phụ trách
+  todayClasses: number;       // Số lớp dạy hôm nay
+  totalStudents: number;      // Tổng số học viên
+  hoursTaught: number;        // Số giờ đã dạy trong tháng
+}
+
+export interface WeeklyScheduleItem {
+  id: number;              // Session ID
+  className: string;
+  room: string;
+  time: string;             // Format: "HH:mm - HH:mm"
+  date: string;             // LocalDate
+  status: string;           // Upcoming, Completed, Canceled
+}
+
+export interface ActiveClass {
+  id: number;              // Class ID
+  className: string;
+  course: string;
+  students: number;
+  progress: string;         // Format: "5/24"
+  progressPercent: number;     // 0-100
+}
+
+export interface Reminder {
+  id: number;
+  message: string;
+  type: string;             // warning, info
+}
+
+export interface AttendanceStats {
+  className: string;
+  attendancePercent: number;   // 0-100
+  absentPercent: number;       // 0-100
+}
+
+export interface LecturerDashboardStatsResponse {
+  overview: LecturerDashboardOverview;
+  weeklySchedule: WeeklyScheduleItem[];
+  activeClasses: ActiveClass[];
+  reminders: Reminder[];
+  attendanceStats: AttendanceStats[];
+}

@@ -171,11 +171,11 @@ const TeacherClassDetail: React.FC = () => {
                                 Thông tin chung
                             </Typography>
                             <Divider sx={{ mb: 2 }} />
-                            <Grid container spacing={2}>
+                            <Grid container spacing={2} textAlign="left">
                                 <Grid size={{ xs: 12, sm: 6 }}>
-                                    <Stack spacing={2}>
+                                    <Stack spacing={3}>
                                         <Box sx={{ display: "flex", alignItems: "center" }}>
-                                            <CalendarToday color="action" sx={{ mr: 1 }} />
+                                            <CalendarToday color="action" sx={{ mr: 2 }} />
                                             <Box>
                                                 <Typography variant="caption" color="text.secondary">
                                                     Thời gian học
@@ -186,7 +186,7 @@ const TeacherClassDetail: React.FC = () => {
                                             </Box>
                                         </Box>
                                         <Box sx={{ display: "flex", alignItems: "center" }}>
-                                            <AccessTime color="action" sx={{ mr: 1 }} />
+                                            <AccessTime color="action" sx={{ mr: 2 }} />
                                             <Box>
                                                 <Typography variant="caption" color="text.secondary">
                                                     Lịch học
@@ -201,7 +201,7 @@ const TeacherClassDetail: React.FC = () => {
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Stack spacing={2}>
                                         <Box sx={{ display: "flex", alignItems: "center" }}>
-                                            <Room color="action" sx={{ mr: 1 }} />
+                                            <Room color="action" sx={{ mr: 2 }} />
                                             <Box>
                                                 <Typography variant="caption" color="text.secondary">
                                                     Phòng học
@@ -210,7 +210,7 @@ const TeacherClassDetail: React.FC = () => {
                                             </Box>
                                         </Box>
                                         <Box sx={{ display: "flex", alignItems: "center" }}>
-                                            <School color="action" sx={{ mr: 1 }} />
+                                            <School color="action" sx={{ mr: 2 }} />
                                             <Box>
                                                 <Typography variant="caption" color="text.secondary">
                                                     Sĩ số

@@ -86,9 +86,9 @@ const DashboardPage: React.FC = () => {
             Thống kê Đào tạo
           </Typography>
           <TrainingStats
-            occupancy={data.classOccupancy}
+            progress={data.courseProgress}
             schedule={data.classSchedule}
-            attendance={data.attendanceRates}
+            endingClasses={data.endingClasses}
           />
         </section>
 

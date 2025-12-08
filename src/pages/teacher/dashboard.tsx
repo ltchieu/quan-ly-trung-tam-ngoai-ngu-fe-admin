@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box,
     Container,
@@ -21,6 +21,8 @@ import {
     ListItemText,
     ListItemIcon,
     Divider,
+    CircularProgress,
+    Alert,
 } from "@mui/material";
 import {
     School,
@@ -41,6 +43,8 @@ import {
     Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { getLecturerDashboardStats } from "../../services/teacher_service";
+import { LecturerDashboardStatsResponse } from "../../model/teacher_model";
 
 ChartJS.register(
     CategoryScale,
@@ -52,88 +56,44 @@ ChartJS.register(
 );
 
 const TeacherDashboard: React.FC = () => {
-    // Mock Data
-    const overviewData = {
-        classesInCharge: 5,
-        todayClasses: 2,
-        totalStudents: 120,
-        hoursTaught: 45,
-    };
+    const [dashboardData, setDashboardData] = useState<LecturerDashboardStatsResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>("");
 
-    const weeklySchedule = [
-        {
-            id: 1,
-            className: "IELTS Foundation - K12",
-            room: "P.301",
-            time: "08:00 - 10:00",
-            date: "2023-11-27",
-            status: "Upcoming",
-        },
-        {
-            id: 2,
-            className: "Giao tiếp nâng cao - K05",
-            room: "P.202",
-            time: "14:00 - 16:00",
-            date: "2023-11-27",
-            status: "Upcoming",
-        },
-    ];
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                setLoading(true);
+                const data = await getLecturerDashboardStats();
+                setDashboardData(data);
+                setError("");
+            } catch (err: any) {
+                console.error("Error fetching dashboard data:", err);
+                setError(err.message || "Không thể tải dữ liệu dashboard");
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const activeClasses = [
-        {
-            id: 1,
-            className: "IELTS Foundation - K12",
-            course: "IELTS Foundation",
-            students: 24,
-            progress: "5/24",
-            progressPercent: 20,
-        },
-        {
-            id: 2,
-            className: "Giao tiếp nâng cao - K05",
-            course: "Tiếng Anh Giao Tiếp",
-            students: 18,
-            progress: "12/24",
-            progressPercent: 50,
-        },
-        {
-            id: 3,
-            className: "TOEIC 500+ - K08",
-            course: "Luyện thi TOEIC",
-            students: 30,
-            progress: "20/24",
-            progressPercent: 83,
-        },
-    ];
+        fetchDashboardData();
+    }, []);
 
-    const reminders = [
-        {
-            id: 1,
-            message: "Chưa điểm danh lớp IELTS Foundation - K12 ngày 25/11",
-            type: "warning",
-        },
-        {
-            id: 2,
-            message: "Lớp TOEIC 500+ - K08 sắp kết thúc (Còn 4 buổi)",
-            type: "info",
-        },
-    ];
-
-    const chartData = {
-        labels: ["IELTS K12", "GT K05", "TOEIC K08"],
+    // Chart data from API
+    const chartData = dashboardData ? {
+        labels: dashboardData.attendanceStats.map(stat => stat.className),
         datasets: [
             {
                 label: 'Tỷ lệ đi học (%)',
-                data: [95, 88, 92],
+                data: dashboardData.attendanceStats.map(stat => stat.attendancePercent),
                 backgroundColor: '#4caf50',
             },
             {
                 label: 'Tỷ lệ vắng (%)',
-                data: [5, 12, 8],
+                data: dashboardData.attendanceStats.map(stat => stat.absentPercent),
                 backgroundColor: '#f44336',
             },
         ],
-    };
+    } : null;
 
     const chartOptions = {
         responsive: true,
@@ -146,6 +106,24 @@ const TeacherDashboard: React.FC = () => {
             },
         },
     };
+
+    if (loading) {
+        return (
+            <Container maxWidth="xl" sx={{ mt: 4, mb: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+                <CircularProgress />
+            </Container>
+        );
+    }
+
+    if (error || !dashboardData) {
+        return (
+            <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+                <Alert severity="error">{error || "Không có dữ liệu"}</Alert>
+            </Container>
+        );
+    }
+
+    const { overview, weeklySchedule, activeClasses, reminders } = dashboardData;
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -162,7 +140,7 @@ const TeacherDashboard: React.FC = () => {
                                 <School color="primary" fontSize="large" />
                                 <Box>
                                     <Typography variant="h4" fontWeight="bold">
-                                        {overviewData.classesInCharge}
+                                        {overview.classesInCharge}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         Lớp đang phụ trách
@@ -179,7 +157,7 @@ const TeacherDashboard: React.FC = () => {
                                 <CalendarToday color="warning" fontSize="large" />
                                 <Box>
                                     <Typography variant="h4" fontWeight="bold">
-                                        {overviewData.todayClasses}
+                                        {overview.todayClasses}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         Lớp dạy hôm nay
@@ -196,7 +174,7 @@ const TeacherDashboard: React.FC = () => {
                                 <People color="success" fontSize="large" />
                                 <Box>
                                     <Typography variant="h4" fontWeight="bold">
-                                        {overviewData.totalStudents}
+                                        {overview.totalStudents}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         Tổng học viên
@@ -213,7 +191,7 @@ const TeacherDashboard: React.FC = () => {
                                 <AccessTime color="secondary" fontSize="large" />
                                 <Box>
                                     <Typography variant="h4" fontWeight="bold">
-                                        {overviewData.hoursTaught}
+                                        {overview.hoursTaught}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         Giờ dạy trong tháng
@@ -373,7 +351,7 @@ const TeacherDashboard: React.FC = () => {
                             <Typography variant="h6" fontWeight="bold" gutterBottom>
                                 Tỷ lệ chuyên cần
                             </Typography>
-                            <Bar options={chartOptions} data={chartData} />
+                            {chartData && <Bar options={chartOptions} data={chartData} />}
                         </CardContent>
                     </Card>
                 </Grid>

@@ -28,12 +28,13 @@ export interface PaymentMethodData {
     count: number;
 }
 
-export interface ClassOccupancyData {
+export interface CourseProgressData {
     classId: number;
     className: string;
-    enrolled: number;
-    capacity: number;
-    occupancyRate: number;
+    courseName: string;
+    completedSessions: number;
+    totalSessions: number;
+    progressRate: number;
 }
 
 export interface ClassScheduleData {
@@ -41,10 +42,12 @@ export interface ClassScheduleData {
     count: number;
 }
 
-export interface AttendanceRateData {
+export interface EndingClassData {
     classId: number;
     className: string;
-    attendanceRate: number;
+    courseName: string;
+    remainingSessions: number;
+    endDate: string;
 }
 
 export interface LecturerProductivityData {
@@ -63,9 +66,9 @@ export interface DashboardData {
     annualRevenue: RevenueChartData[];
     topCourses: TopCourseData[];
     paymentMethods: PaymentMethodData[];
-    classOccupancy: ClassOccupancyData[];
+    courseProgress: CourseProgressData[];
     classSchedule: ClassScheduleData[];
-    attendanceRates: AttendanceRateData[];
+    endingClasses: EndingClassData[];
     topLecturers: LecturerProductivityData[];
     lecturerDistribution: LecturerDistributionData[];
 }
@@ -106,24 +109,24 @@ const MOCK_DASHBOARD_DATA: DashboardData = {
         { method: "Tiền mặt", count: 50 },
         { method: "Thẻ tín dụng", count: 20 },
     ],
-    classOccupancy: [
-        { classId: 101, className: "IELTS F - K12", enrolled: 18, capacity: 20, occupancyRate: 90 },
-        { classId: 102, className: "TOEIC - K08", enrolled: 25, capacity: 30, occupancyRate: 83.3 },
-        { classId: 103, className: "Giao tiếp - K05", enrolled: 5, capacity: 15, occupancyRate: 33.3 }, // Low occupancy
-        { classId: 104, className: "IELTS A - K03", enrolled: 12, capacity: 15, occupancyRate: 80 },
-        { classId: 105, className: "Kids - K01", enrolled: 10, capacity: 10, occupancyRate: 100 }, // Full
+    courseProgress: [
+        { classId: 101, className: "IELTS F - K12", courseName: "IELTS Foundation", completedSessions: 18, totalSessions: 20, progressRate: 90 },
+        { classId: 102, className: "TOEIC - K08", courseName: "TOEIC 650+", completedSessions: 25, totalSessions: 30, progressRate: 83.3 },
+        { classId: 103, className: "Giao tiếp - K05", courseName: "Giao tiếp cơ bản", completedSessions: 5, totalSessions: 15, progressRate: 33.3 },
+        { classId: 104, className: "IELTS A - K03", courseName: "IELTS Advanced", completedSessions: 12, totalSessions: 15, progressRate: 80 },
+        { classId: 105, className: "Kids - K01", courseName: "Tiếng Anh trẻ em", completedSessions: 10, totalSessions: 10, progressRate: 100 },
     ],
     classSchedule: [
         { timeFrame: "Sáng (7h-12h)", count: 5 },
         { timeFrame: "Chiều (13h-17h)", count: 8 },
         { timeFrame: "Tối (17h-21h)", count: 15 },
     ],
-    attendanceRates: [
-        { classId: 101, className: "IELTS F - K12", attendanceRate: 95 },
-        { classId: 102, className: "TOEIC - K08", attendanceRate: 88 },
-        { classId: 103, className: "Giao tiếp - K05", attendanceRate: 92 },
-        { classId: 104, className: "IELTS A - K03", attendanceRate: 85 },
-        { classId: 105, className: "Kids - K01", attendanceRate: 98 },
+    endingClasses: [
+        { classId: 103, className: "Giao tiếp - K05", courseName: "Giao tiếp cơ bản", remainingSessions: 2, endDate: "2025-12-15" },
+        { classId: 104, className: "IELTS A - K03", courseName: "IELTS Advanced", remainingSessions: 3, endDate: "2025-12-20" },
+        { classId: 105, className: "Kids - K01", courseName: "Tiếng Anh trẻ em", remainingSessions: 0, endDate: "2025-12-10" },
+        { classId: 107, className: "TOEIC B - K09", courseName: "TOEIC 750+", remainingSessions: 4, endDate: "2025-12-25" },
+        { classId: 108, className: "Business - K02", courseName: "Business English", remainingSessions: 5, endDate: "2025-12-28" },
     ],
     topLecturers: [
         { lecturerId: 1, lecturerName: "Nguyễn Văn A", activeClasses: 5 },
@@ -172,9 +175,9 @@ export const getDashboardData = async (): Promise<DashboardData> => {
             annualRevenue: MOCK_DASHBOARD_DATA.annualRevenue,
             topCourses: MOCK_DASHBOARD_DATA.topCourses,
             paymentMethods: MOCK_DASHBOARD_DATA.paymentMethods,
-            classOccupancy: MOCK_DASHBOARD_DATA.classOccupancy,
+            courseProgress: MOCK_DASHBOARD_DATA.courseProgress,
             classSchedule: MOCK_DASHBOARD_DATA.classSchedule,
-            attendanceRates: MOCK_DASHBOARD_DATA.attendanceRates,
+            endingClasses: MOCK_DASHBOARD_DATA.endingClasses,
             topLecturers: MOCK_DASHBOARD_DATA.topLecturers,
             lecturerDistribution: MOCK_DASHBOARD_DATA.lecturerDistribution,
         };

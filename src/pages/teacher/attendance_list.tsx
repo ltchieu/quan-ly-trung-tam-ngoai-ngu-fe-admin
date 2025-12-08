@@ -40,7 +40,6 @@ const TeacherAttendanceList: React.FC = () => {
     // Filters
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [selectedCourse, setSelectedCourse] = useState<string>("all");
-    const [selectedStatus, setSelectedStatus] = useState<string>("all");
     const [page, setPage] = useState<number>(1);
     const itemsPerPage = 6;
 
@@ -96,13 +95,9 @@ const TeacherAttendanceList: React.FC = () => {
             result = result.filter((c) => c.courseName === selectedCourse);
         }
 
-        if (selectedStatus !== "all") {
-            result = result.filter((c) => c.status === selectedStatus);
-        }
-
         setFilteredClasses(result);
         setPage(1); // Reset to first page on filter change
-    }, [searchTerm, selectedCourse, selectedStatus, classes]);
+    }, [searchTerm, selectedCourse, classes]);
 
     // Pagination logic
     const pageCount = Math.ceil(filteredClasses.length / itemsPerPage);
@@ -188,21 +183,7 @@ const TeacherAttendanceList: React.FC = () => {
                             ))}
                         </TextField>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 3 }}>
-                        <TextField
-                            select
-                            fullWidth
-                            label="Trạng thái"
-                            value={selectedStatus}
-                            onChange={(e) => setSelectedStatus(e.target.value)}
-                            size="small"
-                        >
-                            <MenuItem value="all">Tất cả trạng thái</MenuItem>
-                            <MenuItem value="DangHoc">Đang học</MenuItem>
-                            <MenuItem value="SapMo">Sắp mở</MenuItem>
-                            <MenuItem value="DaKetThuc">Đã kết thúc</MenuItem>
-                        </TextField>
-                    </Grid>
+                   
                     <Grid size={{ xs: 12, md: 2 }} sx={{ textAlign: "right" }}>
                         <Button
                             variant="outlined"
@@ -210,7 +191,6 @@ const TeacherAttendanceList: React.FC = () => {
                             onClick={() => {
                                 setSearchTerm("");
                                 setSelectedCourse("all");
-                                setSelectedStatus("all");
                             }}
                         >
                             Xóa bộ lọc

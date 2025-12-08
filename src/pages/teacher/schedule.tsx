@@ -37,7 +37,7 @@ import {
     getCourseFilterList,
     getRoomFilterList,
 } from "../../services/class_service";
-import { getTeacherScheduleMock } from "../../services/schedule_service";
+import { getTeacherSchedule } from "../../services/schedule_service";
 import { faAngleLeft, faAngleRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useAuth } from "../../hook/useAuth";
@@ -52,6 +52,19 @@ const mapDayToVN: Record<string, string> = {
     FRIDAY: "Thứ 6",
     SATURDAY: "Thứ 7",
     SUNDAY: "Chủ nhật",
+};
+
+// Helper function to calculate end time
+const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(hours, minutes, 0, 0);
+    
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+    const endHours = String(endDate.getHours()).padStart(2, '0');
+    const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+    
+    return `${endHours}:${endMinutes}`;
 };
 
 const TeacherSchedule: React.FC = () => {
@@ -94,19 +107,8 @@ const TeacherSchedule: React.FC = () => {
         try {
             const formattedDate = currentDate.format("YYYY-MM-DD");
 
-            // For now, we use mock data, so filters might not apply on backend but we pass them anyway
-            // or we can filter on frontend if needed.
-            // The mock service currently ignores filters and returns static data.
-
-            const data = await getTeacherScheduleMock(
-                userId || 0,
-                formattedDate
-            );
-
-            // Optional: Filter data on frontend if mock service doesn't handle it
-            // For simplicity, we assume service handles it or we just show what we get.
-
-            setScheduleData(data as unknown as WeeklyScheduleResponse);
+            const data = await getTeacherSchedule(formattedDate);
+            setScheduleData(data);
         } catch (error) {
             console.error("Error fetching schedule:", error);
         } finally {
@@ -152,9 +154,9 @@ const TeacherSchedule: React.FC = () => {
                 <Typography
                     variant="caption"
                     display="block"
-                    sx={{ fontWeight: "bold", color: "#555" }}
+                    sx={{ fontWeight: "bold", color: "#1976d2", mb: 0.5 }}
                 >
-                    {session.courseName}
+                    {session.startTime} - {calculateEndTime(session.startTime, session.durationMinutes)}
                 </Typography>
                 <Typography variant="caption" display="block">
                     Phòng: <b>{session.roomName}</b>

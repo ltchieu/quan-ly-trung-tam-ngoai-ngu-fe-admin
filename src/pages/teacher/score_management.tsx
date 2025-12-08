@@ -18,26 +18,15 @@ import {
     Link,
     Snackbar,
     Alert,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     TextField,
-    MenuItem,
-    Grid,
-    Avatar,
-    Chip,
-    Stack
+    Avatar
 } from "@mui/material";
 import {
     ArrowBack,
     Save,
-    Edit,
     Person
 } from "@mui/icons-material";
-import { getClassDetail } from "../../services/class_service";
 import { getClassGrades, saveGrade } from "../../services/score_service";
-import { ClassDetailResponse } from "../../model/class_model";
 import { SCORE_TYPES, GradeRequest, ClassGradesResponse, StudentGradeInfo } from "../../model/score_model";
 
 const TeacherScoreManagement: React.FC = () => {
@@ -45,14 +34,16 @@ const TeacherScoreManagement: React.FC = () => {
     const navigate = useNavigate();
     const [gradesData, setGradesData] = useState<ClassGradesResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
-
-    // Dialog states
-    const [openDialog, setOpenDialog] = useState(false);
-    const [selectedStudent, setSelectedStudent] = useState<StudentGradeInfo | null>(null);
-    const [selectedType, setSelectedType] = useState<string>(SCORE_TYPES[0].value);
-    const [scoreValue, setScoreValue] = useState<number>(0);
-    const [comment, setComment] = useState<string>("");
     const [saving, setSaving] = useState(false);
+
+    // Edited scores tracking
+    const [editedScores, setEditedScores] = useState<Map<string, {
+        studentId: number;
+        gradeType: string;
+        score: number;
+        gradeId?: number;
+        enrollmentId: number;
+    }>>(new Map());
 
     const [notification, setNotification] = useState<{ open: boolean; message: string; severity: "success" | "error" | "warning" }>({
         open: false,
@@ -85,85 +76,100 @@ const TeacherScoreManagement: React.FC = () => {
         fetchData();
     }, [classId]);
 
-    const handleOpenDialog = (student: StudentGradeInfo, gradeType: string) => {
-        setSelectedStudent(student);
-        setSelectedType(gradeType);
-        
-        // Get current grade data based on type
-        let currentGrade = null;
-        let currentScore = 0;
-        let currentComment = "";
-        
-        if (gradeType === 'ATTENDANCE' && student.attendanceGrade) {
-            currentGrade = student.attendanceGrade;
-            currentScore = student.attendanceScore || 0;
-            currentComment = student.attendanceGrade.comment || "";
-        } else if (gradeType === 'MIDTERM' && student.midtermGrade) {
-            currentGrade = student.midtermGrade;
-            currentScore = student.midtermScore || 0;
-            currentComment = student.midtermGrade.comment || "";
-        } else if (gradeType === 'FINAL' && student.finalGrade) {
-            currentGrade = student.finalGrade;
-            currentScore = student.finalScore || 0;
-            currentComment = student.finalGrade.comment || "";
+    const handleScoreChange = (student: StudentGradeInfo, gradeType: string, value: string) => {
+        // Allow empty value (user is deleting/clearing the field)
+        if (value === '') {
+            const key = `${student.studentId}-${gradeType}`;
+            const newEditedScores = new Map(editedScores);
+            newEditedScores.delete(key); // Remove from edited scores if clearing
+            setEditedScores(newEditedScores);
+            return;
         }
-        
-        setScoreValue(currentScore);
-        setComment(currentComment);
-        setOpenDialog(true);
+
+        const score = parseFloat(value);
+        // Validate score range
+        if (isNaN(score) || score < 0 || score > 10) return;
+
+        const key = `${student.studentId}-${gradeType}`;
+        let gradeId: number | undefined;
+
+        // Get gradeId from existing grade
+        if (gradeType === 'ATTENDANCE' && student.attendanceGrade) {
+            gradeId = student.attendanceGrade.gradeId;
+        } else if (gradeType === 'MIDTERM' && student.midtermGrade) {
+            gradeId = student.midtermGrade.gradeId;
+        } else if (gradeType === 'FINAL' && student.finalGrade) {
+            gradeId = student.finalGrade.gradeId;
+        }
+
+        const newEditedScores = new Map(editedScores);
+        newEditedScores.set(key, {
+            studentId: student.studentId,
+            gradeType,
+            score,
+            gradeId,
+            enrollmentId: student.enrollmentId
+        });
+        setEditedScores(newEditedScores);
     };
 
-    const handleSave = async () => {
-        // Validate score (0-10)
-        if (scoreValue < 0 || scoreValue > 10) {
+    const handleSaveAll = async () => {
+        if (editedScores.size === 0) {
             setNotification({
                 open: true,
-                message: "Điểm số không hợp lệ (phải từ 0-10).",
-                severity: "error"
+                message: "Không có thay đổi nào để lưu.",
+                severity: "warning"
             });
             return;
         }
 
-        if (!selectedStudent) return;
-
         try {
             setSaving(true);
-            
-            // Get gradeTypeId from selected type
-            const gradeTypeId = SCORE_TYPES.find(t => t.value === selectedType)?.gradeTypeId || 1;
-            
-            // Get gradeId if updating existing grade
-            let gradeId: number | null = null;
-            if (selectedType === 'ATTENDANCE' && selectedStudent.attendanceGrade) {
-                gradeId = selectedStudent.attendanceGrade.gradeId;
-            } else if (selectedType === 'MIDTERM' && selectedStudent.midtermGrade) {
-                gradeId = selectedStudent.midtermGrade.gradeId;
-            } else if (selectedType === 'FINAL' && selectedStudent.finalGrade) {
-                gradeId = selectedStudent.finalGrade.gradeId;
+            let successCount = 0;
+            let errorCount = 0;
+
+            // Save all edited scores
+            const entries = Array.from(editedScores.entries());
+            for (const [key, data] of entries) {
+                try {
+                    const gradeTypeId = SCORE_TYPES.find(t => t.value === data.gradeType)?.gradeTypeId || 1;
+                    
+                    const request: GradeRequest = {
+                        enrollmentId: data.enrollmentId,
+                        gradeTypeId: gradeTypeId,
+                        score: data.score,
+                        comment: undefined
+                    };
+                    
+                    await saveGrade(data.gradeId || null, request);
+                    successCount++;
+                } catch (error) {
+                    console.error(`Error saving score for ${key}:`, error);
+                    errorCount++;
+                }
             }
-            
-            const request: GradeRequest = {
-                enrollmentId: selectedStudent.enrollmentId,
-                gradeTypeId: gradeTypeId,
-                score: scoreValue,
-                comment: comment || undefined
-            };
-            
-            await saveGrade(gradeId, request);
-            
-            setNotification({
-                open: true,
-                message: gradeId ? "Cập nhật điểm thành công!" : "Nhập điểm thành công!",
-                severity: "success"
-            });
-            setOpenDialog(false);
-            fetchData(); // Reload data
+
+            if (errorCount === 0) {
+                setNotification({
+                    open: true,
+                    message: `Lưu thành công ${successCount} điểm!`,
+                    severity: "success"
+                });
+                setEditedScores(new Map()); // Clear edited scores
+                fetchData(); // Reload data
+            } else {
+                setNotification({
+                    open: true,
+                    message: `Lưu thành công ${successCount} điểm, thất bại ${errorCount} điểm.`,
+                    severity: "warning"
+                });
+                fetchData();
+            }
         } catch (error: any) {
-            console.error("Error saving grade:", error);
-            const errorMessage = error?.response?.data?.message || "Lưu điểm thất bại.";
+            console.error("Error saving grades:", error);
             setNotification({
                 open: true,
-                message: errorMessage,
+                message: "Có lỗi xảy ra khi lưu điểm.",
                 severity: "error"
             });
         } finally {
@@ -216,9 +222,19 @@ const TeacherScoreManagement: React.FC = () => {
                         {gradesData?.className} - {gradesData?.courseName}
                     </Typography>
                 </Box>
-                <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(`/teacher/classes/${classId}`)}>
-                    Quay lại
-                </Button>
+                <Box sx={{ display: "flex", gap: 2 }}>
+                    <Button 
+                        variant="contained" 
+                        startIcon={<Save />} 
+                        onClick={handleSaveAll}
+                        disabled={editedScores.size === 0 || saving}
+                    >
+                        Lưu thay đổi {editedScores.size > 0 && `(${editedScores.size})`}
+                    </Button>
+                    <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(`/teacher/classes/${classId}`)}>
+                        Quay lại
+                    </Button>
+                </Box>
             </Box>
 
             <Card>
@@ -256,34 +272,61 @@ const TeacherScoreManagement: React.FC = () => {
                                             </Box>
                                         </TableCell>
                                         <TableCell align="center">
-                                            <Button
+                                            <TextField
+                                                type="number"
                                                 size="small"
-                                                variant={student.attendanceScore !== null ? "text" : "outlined"}
-                                                onClick={() => handleOpenDialog(student, 'ATTENDANCE')}
-                                                sx={{ minWidth: 60 }}
-                                            >
-                                                {student.attendanceScore !== null ? student.attendanceScore : "Nhập"}
-                                            </Button>
+                                                value={editedScores.get(`${student.studentId}-ATTENDANCE`)?.score ?? student.attendanceScore ?? ''}
+                                                onChange={(e) => handleScoreChange(student, 'ATTENDANCE', e.target.value)}
+                                                placeholder="0-10"
+                                                inputProps={{ min: 0, max: 10, step: 0.5 }}
+                                                sx={{ 
+                                                    width: 80,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderColor: editedScores.has(`${student.studentId}-ATTENDANCE`) ? 'warning.main' : undefined,
+                                                        '&.Mui-focused fieldset': {
+                                                            borderColor: editedScores.has(`${student.studentId}-ATTENDANCE`) ? 'warning.main' : 'primary.main'
+                                                        }
+                                                    }
+                                                }}
+                                            />
                                         </TableCell>
                                         <TableCell align="center">
-                                            <Button
+                                            <TextField
+                                                type="number"
                                                 size="small"
-                                                variant={student.midtermScore !== null ? "text" : "outlined"}
-                                                onClick={() => handleOpenDialog(student, 'MIDTERM')}
-                                                sx={{ minWidth: 60 }}
-                                            >
-                                                {student.midtermScore !== null ? student.midtermScore : "Nhập"}
-                                            </Button>
+                                                value={editedScores.get(`${student.studentId}-MIDTERM`)?.score ?? student.midtermScore ?? ''}
+                                                onChange={(e) => handleScoreChange(student, 'MIDTERM', e.target.value)}
+                                                placeholder="0-10"
+                                                inputProps={{ min: 0, max: 10, step: 0.5 }}
+                                                sx={{ 
+                                                    width: 80,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderColor: editedScores.has(`${student.studentId}-MIDTERM`) ? 'warning.main' : undefined,
+                                                        '&.Mui-focused fieldset': {
+                                                            borderColor: editedScores.has(`${student.studentId}-MIDTERM`) ? 'warning.main' : 'primary.main'
+                                                        }
+                                                    }
+                                                }}
+                                            />
                                         </TableCell>
                                         <TableCell align="center">
-                                            <Button
+                                            <TextField
+                                                type="number"
                                                 size="small"
-                                                variant={student.finalScore !== null ? "text" : "outlined"}
-                                                onClick={() => handleOpenDialog(student, 'FINAL')}
-                                                sx={{ minWidth: 60 }}
-                                            >
-                                                {student.finalScore !== null ? student.finalScore : "Nhập"}
-                                            </Button>
+                                                value={editedScores.get(`${student.studentId}-FINAL`)?.score ?? student.finalScore ?? ''}
+                                                onChange={(e) => handleScoreChange(student, 'FINAL', e.target.value)}
+                                                placeholder="0-10"
+                                                inputProps={{ min: 0, max: 10, step: 0.5 }}
+                                                sx={{ 
+                                                    width: 80,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderColor: editedScores.has(`${student.studentId}-FINAL`) ? 'warning.main' : undefined,
+                                                        '&.Mui-focused fieldset': {
+                                                            borderColor: editedScores.has(`${student.studentId}-FINAL`) ? 'warning.main' : 'primary.main'
+                                                        }
+                                                    }
+                                                }}
+                                            />
                                         </TableCell>
                                         <TableCell align="center" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                                             {student.totalScore !== null ? student.totalScore.toFixed(2) : "-"}
@@ -304,60 +347,6 @@ const TeacherScoreManagement: React.FC = () => {
                     </TableContainer>
                 </CardContent>
             </Card>
-
-            {/* Dialog Input/Edit Score */}
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>
-                    {selectedStudent && (
-                        <Box>
-                            <Typography variant="h6">
-                                {SCORE_TYPES.find(t => t.value === selectedType)?.label}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Học viên: {selectedStudent.studentName}
-                            </Typography>
-                        </Box>
-                    )}
-                </DialogTitle>
-                <DialogContent dividers>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <TextField
-                            label="Loại điểm"
-                            value={SCORE_TYPES.find(t => t.value === selectedType)?.label || ""}
-                            fullWidth
-                            disabled
-                            size="small"
-                        />
-                        <TextField
-                            label="Điểm số (0-10)"
-                            type="number"
-                            value={scoreValue}
-                            onChange={(e) => setScoreValue(parseFloat(e.target.value) || 0)}
-                            fullWidth
-                            inputProps={{ min: 0, max: 10, step: 0.5 }}
-                            error={scoreValue < 0 || scoreValue > 10}
-                            helperText={scoreValue < 0 || scoreValue > 10 ? "Điểm phải từ 0 đến 10" : ""}
-                        />
-                        <TextField
-                            label="Nhận xét (không bắt buộc)"
-                            value={comment}
-                            onChange={(e) => setComment(e.target.value)}
-                            fullWidth
-                            multiline
-                            rows={3}
-                            placeholder="Nhập nhận xét của bạn..."
-                        />
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenDialog(false)} color="inherit">
-                        Hủy
-                    </Button>
-                    <Button onClick={handleSave} variant="contained" disabled={saving}>
-                        {saving ? "Đang lưu..." : "Lưu điểm"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
 
             <Snackbar
                 open={notification.open}
