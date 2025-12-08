@@ -11,24 +11,36 @@ import {
     ListItem,
     ListItemText,
     Divider,
+    Chip,
+    IconButton,
 } from "@mui/material";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
 import {
     CourseProgressData,
-    ClassScheduleData,
     EndingClassData,
 } from "../../services/dashboard_service";
+import { CanceledSessionData } from "../../model/dashboard_model";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
     progress: CourseProgressData[];
-    schedule: ClassScheduleData[];
+    canceledSessions: CanceledSessionData[];
     endingClasses: EndingClassData[];
 }
 
 export const TrainingStats: React.FC<Props> = ({
     progress,
-    schedule,
+    canceledSessions,
     endingClasses,
 }) => {
+    const navigate = useNavigate();
+
+    const handleViewSchedule = (classId: number) => {
+        navigate(`/schedule?classId=${classId}`);
+    };
+
     return (
         <Grid container spacing={3}>
             {/* Course Progress */}
@@ -66,20 +78,78 @@ export const TrainingStats: React.FC<Props> = ({
                 </Card>
             </Grid>
 
-            {/* Class Schedule */}
+            {/* Canceled Sessions */}
             <Grid size={{ md: 4, xs: 12 }}>
                 <Card sx={{ height: "100%", borderRadius: 4, boxShadow: 3 }}>
-                    <CardHeader title="Phân bổ khung giờ" />
+                    <CardHeader title="Buổi học đã hủy" />
                     <CardContent>
-                        <List>
-                            {schedule.map((item, index) => (
-                                <React.Fragment key={index}>
-                                    <ListItem>
-                                        <ListItemText primary={item.timeFrame} secondary={`${item.count} lớp`} />
-                                    </ListItem>
-                                    {index < schedule.length - 1 && <Divider />}
-                                </React.Fragment>
-                            ))}
+                        <List dense>
+                            {canceledSessions.length === 0 ? (
+                                <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+                                    Không có buổi học nào bị hủy
+                                </Typography>
+                            ) : (
+                                canceledSessions.map((session) => (
+                                    <React.Fragment key={session.sessionId}>
+                                        <ListItem 
+                                            disablePadding 
+                                            sx={{ mb: 2, display: 'block' }}
+                                            secondaryAction={
+                                                <IconButton 
+                                                    edge="end" 
+                                                    size="small"
+                                                    onClick={() => handleViewSchedule(session.classId)}
+                                                    title="Xem lịch học"
+                                                >
+                                                    <VisibilityIcon fontSize="small" />
+                                                </IconButton>
+                                            }
+                                        >
+                                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+                                                <Typography variant="body2" fontWeight="bold">
+                                                    {session.className}
+                                                </Typography>
+                                                {session.hasMakeupSession ? (
+                                                    <Chip 
+                                                        icon={<CheckCircleIcon />}
+                                                        label="Đã có bù" 
+                                                        size="small" 
+                                                        color="success" 
+                                                        variant="outlined"
+                                                        sx={{ height: 20 }}
+                                                    />
+                                                ) : (
+                                                    <Chip 
+                                                        icon={<CancelIcon />}
+                                                        label="Chưa bù" 
+                                                        size="small" 
+                                                        color="error" 
+                                                        variant="outlined"
+                                                        sx={{ height: 20 }}
+                                                    />
+                                                )}
+                                            </Box>
+                                            <Typography variant="caption" display="block" color="text.secondary" mb={0.5}>
+                                                {session.courseName}
+                                            </Typography>
+                                            <Typography variant="caption" display="block" color="text.secondary">
+                                                Ngày hủy: {new Date(session.sessionDate).toLocaleDateString('vi-VN')}
+                                            </Typography>
+                                            {session.hasMakeupSession && session.makeupSessionDate && (
+                                                <Typography variant="caption" display="block" color="success.main">
+                                                    Ngày bù: {new Date(session.makeupSessionDate).toLocaleDateString('vi-VN')}
+                                                </Typography>
+                                            )}
+                                            {session.cancelReason && (
+                                                <Typography variant="caption" display="block" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                                    Lý do: {session.cancelReason}
+                                                </Typography>
+                                            )}
+                                        </ListItem>
+                                        <Divider sx={{ mb: 2 }} />
+                                    </React.Fragment>
+                                ))
+                            )}
                         </List>
                     </CardContent>
                 </Card>

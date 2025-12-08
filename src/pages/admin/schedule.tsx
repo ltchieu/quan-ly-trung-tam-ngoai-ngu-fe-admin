@@ -704,12 +704,6 @@ const Timetable: React.FC = () => {
             </MenuItem>
           ) : (
             <>
-              <MenuItem onClick={handleOpenMakeupDialog} disabled>
-                <ListItemIcon>
-                  <EventAvailableIcon fontSize="small" sx={{ color: 'action.disabled' }} />
-                </ListItemIcon>
-                <ListItemText>Thêm buổi học bù</ListItemText>
-              </MenuItem>
               <MenuItem onClick={handleOpenCancelDialog}>
                 <ListItemIcon>
                   <DeleteOutlineIcon fontSize="small" color="error" />

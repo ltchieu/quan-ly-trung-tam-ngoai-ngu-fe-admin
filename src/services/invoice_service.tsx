@@ -69,3 +69,38 @@ export const getInvoiceById = async (id: number) => {
     throw new Error(message);
   }
 };
+
+/**
+ * Tạo URL thanh toán VNPay
+ * POST /orders/payment/create
+ */
+export interface VNPayPaymentRequest {
+  invoiceId: number;
+  amount: string;
+  orderInfo: string;
+}
+
+export interface VNPayPaymentResponse {
+  txnRef: string;
+  amount: number;
+  payUrl: string;
+}
+
+export const createVNPayPayment = async (request: VNPayPaymentRequest) => {
+  try {
+    const response = await axiosClient.post<ApiResponse<VNPayPaymentResponse>>(
+      "/orders/payment/create",
+      request
+    );
+    
+    if (response.data && response.data.code === 1000 && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data?.message || "Tạo thanh toán VNPay thất bại");
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Tạo thanh toán VNPay API error:", message);
+    throw new Error(message);
+  }
+};

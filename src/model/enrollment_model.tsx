@@ -26,6 +26,7 @@ export interface InvoiceResponse {
   totalDiscountPercent: number;
   totalDiscountAmount: number;
   totalAmount: number; // Tổng số tiền phải thanh toán (sau giảm giá)
+  expiryTime: string; // ISO 8601 format - thời gian hết hạn thanh toán (15 phút sau khi tạo)
   details: InvoiceDetailResponse[];
 }
 

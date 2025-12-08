@@ -1,5 +1,5 @@
 import { axiosClient } from "../api/axios_client";
-import { DashboardStatsResponse, ActivityResponse } from "../model/dashboard_model";
+import { DashboardStatsResponse, ActivityResponse, CanceledSessionData } from "../model/dashboard_model";
 
 // --- Interfaces ---
 
@@ -37,11 +37,6 @@ export interface CourseProgressData {
     progressRate: number;
 }
 
-export interface ClassScheduleData {
-    timeFrame: string;
-    count: number;
-}
-
 export interface EndingClassData {
     classId: number;
     className: string;
@@ -67,7 +62,7 @@ export interface DashboardData {
     topCourses: TopCourseData[];
     paymentMethods: PaymentMethodData[];
     courseProgress: CourseProgressData[];
-    classSchedule: ClassScheduleData[];
+    canceledSessions: CanceledSessionData[];
     endingClasses: EndingClassData[];
     topLecturers: LecturerProductivityData[];
     lecturerDistribution: LecturerDistributionData[];
@@ -116,10 +111,11 @@ const MOCK_DASHBOARD_DATA: DashboardData = {
         { classId: 104, className: "IELTS A - K03", courseName: "IELTS Advanced", completedSessions: 12, totalSessions: 15, progressRate: 80 },
         { classId: 105, className: "Kids - K01", courseName: "Tiếng Anh trẻ em", completedSessions: 10, totalSessions: 10, progressRate: 100 },
     ],
-    classSchedule: [
-        { timeFrame: "Sáng (7h-12h)", count: 5 },
-        { timeFrame: "Chiều (13h-17h)", count: 8 },
-        { timeFrame: "Tối (17h-21h)", count: 15 },
+    canceledSessions: [
+        { sessionId: 201, classId: 101, className: "IELTS F - K12", courseName: "IELTS Foundation", sessionDate: "2025-12-05", cancelReason: "Giảng viên bận đột xuất", hasMakeupSession: true, makeupSessionDate: "2025-12-12" },
+        { sessionId: 202, classId: 102, className: "TOEIC - K08", courseName: "TOEIC 650+", sessionDate: "2025-12-07", cancelReason: "Lễ tết", hasMakeupSession: false },
+        { sessionId: 203, classId: 103, className: "Giao tiếp - K05", courseName: "Giao tiếp cơ bản", sessionDate: "2025-12-08", hasMakeupSession: false },
+        { sessionId: 204, classId: 104, className: "IELTS A - K03", courseName: "IELTS Advanced", sessionDate: "2025-12-06", cancelReason: "Phòng học bảo trì", hasMakeupSession: true, makeupSessionDate: "2025-12-13" },
     ],
     endingClasses: [
         { classId: 103, className: "Giao tiếp - K05", courseName: "Giao tiếp cơ bản", remainingSessions: 2, endDate: "2025-12-15" },
@@ -176,7 +172,7 @@ export const getDashboardData = async (): Promise<DashboardData> => {
             topCourses: MOCK_DASHBOARD_DATA.topCourses,
             paymentMethods: MOCK_DASHBOARD_DATA.paymentMethods,
             courseProgress: MOCK_DASHBOARD_DATA.courseProgress,
-            classSchedule: MOCK_DASHBOARD_DATA.classSchedule,
+            canceledSessions: MOCK_DASHBOARD_DATA.canceledSessions,
             endingClasses: MOCK_DASHBOARD_DATA.endingClasses,
             topLecturers: MOCK_DASHBOARD_DATA.topLecturers,
             lecturerDistribution: MOCK_DASHBOARD_DATA.lecturerDistribution,

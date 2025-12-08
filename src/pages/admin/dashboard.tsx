@@ -87,7 +87,7 @@ const DashboardPage: React.FC = () => {
           </Typography>
           <TrainingStats
             progress={data.courseProgress}
-            schedule={data.classSchedule}
+            canceledSessions={data.canceledSessions}
             endingClasses={data.endingClasses}
           />
         </section>

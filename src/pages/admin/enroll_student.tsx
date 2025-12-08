@@ -51,6 +51,7 @@ import { getAllStudents } from "../../services/student_service";
 import { CourseFilterData, ClassView } from "../../model/class_model";
 import { StudentSearchResult, PaymentMethod } from "../../model/enrollment_model";
 import CreateStudentDialog from "../../component/create_student_dialog";
+import VNPayPaymentDialog from "../../component/vnpay_payment_dialog";
 
 const steps = ["Chọn khóa học", "Chọn lớp học", "Chọn học viên", "Chọn phương thức thanh toán", "Xác nhận"];
 
@@ -84,6 +85,12 @@ const EnrollStudent: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [createStudentDialogOpen, setCreateStudentDialogOpen] = useState(false);
+  
+  // VNPay dialog states
+  const [vnpayDialogOpen, setVnpayDialogOpen] = useState(false);
+  const [createdInvoiceId, setCreatedInvoiceId] = useState<number | null>(null);
+  const [invoiceAmount, setInvoiceAmount] = useState<number>(0);
+  const [invoiceExpiryTime, setInvoiceExpiryTime] = useState<string>("");
 
   // Load courses and payment methods on mount
   useEffect(() => {
@@ -238,33 +245,49 @@ const EnrollStudent: React.FC = () => {
       
       const invoiceData = response.data;
       
-      // Bước 2: Nếu thanh toán tiền mặt (id = 1), tự động xác nhận thanh toán
+      // Bước 2: Xử lý theo phương thức thanh toán
       if (selectedPaymentMethod.id === 1) {
+        // Thanh toán tiền mặt - tự động xác nhận
         try {
           await confirmCashPayment(invoiceData.invoiceId);
           setSuccess(`Đăng ký và thanh toán tiền mặt thành công! Mã hóa đơn: ${invoiceData.invoiceId}. Hóa đơn đã được gửi qua email.`);
         } catch (cashErr: any) {
-          // Đăng ký thành công nhưng xác nhận thanh toán thất bại
           setSuccess(`Đăng ký thành công! Mã hóa đơn: ${invoiceData.invoiceId}. Lưu ý: ${cashErr.message}`);
         }
+        
+        setConfirmDialogOpen(false);
+        
+        // Reset after 4 seconds
+        setTimeout(() => {
+          handleReset();
+          setSuccess(null);
+        }, 4000);
       } else {
-        // VNPay - chờ thanh toán
-        setSuccess(`Đăng ký thành công! Mã hóa đơn: ${invoiceData.invoiceId}. Vui lòng thanh toán qua VNPay trong vòng 15 phút.`);
+        // Thanh toán VNPay - hiển thị QR code
+        setCreatedInvoiceId(invoiceData.invoiceId);
+        setInvoiceAmount(invoiceData.totalAmount);
+        setInvoiceExpiryTime(invoiceData.expiryTime);
+        setConfirmDialogOpen(false);
+        setVnpayDialogOpen(true);
       }
       
-      setConfirmDialogOpen(false);
-      
-      // Reset after 4 seconds
-      setTimeout(() => {
-        handleReset();
-        setSuccess(null);
-      }, 4000);
     } catch (err: any) {
       setError(err.message || "Đăng ký khóa học thất bại");
       setConfirmDialogOpen(false);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleVnpayDialogClose = () => {
+    setVnpayDialogOpen(false);
+    setSuccess("Hóa đơn đã được tạo. Học viên có thể thanh toán trong vòng 15 phút.");
+    
+    // Reset after 4 seconds
+    setTimeout(() => {
+      handleReset();
+      setSuccess(null);
+    }, 4000);
   };
 
   const getStepContent = (step: number) => {
@@ -821,6 +844,17 @@ const EnrollStudent: React.FC = () => {
           setSuccess(`Đã tạo học viên "${studentName}" thành công!`);
         }}
       />
+
+      {/* VNPay Payment Dialog */}
+      {createdInvoiceId && (
+        <VNPayPaymentDialog
+          open={vnpayDialogOpen}
+          onClose={handleVnpayDialogClose}
+          invoiceId={createdInvoiceId}
+          amount={invoiceAmount}
+          expiryTime={invoiceExpiryTime}
+        />
+      )}
 
       {/* Success Snackbar */}
       <Snackbar

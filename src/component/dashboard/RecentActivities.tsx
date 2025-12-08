@@ -125,7 +125,7 @@ export const RecentActivities: React.FC<Props> = ({
         <Typography variant="h6" fontWeight="bold" gutterBottom>
           Hoạt động gần đây
         </Typography>
-        {activities.length === 0 ? (
+        {!activities || activities.length === 0 ? (
           <Typography color="text.secondary" align="center" sx={{ py: 3 }}>
             Chưa có hoạt động nào
           </Typography>

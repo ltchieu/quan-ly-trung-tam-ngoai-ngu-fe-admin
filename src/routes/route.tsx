@@ -37,6 +37,7 @@ import RoomDetailPage from "../pages/admin/room_detail";
 import EnrollStudent from "../pages/admin/enroll_student";
 import InvoiceListPage from "../pages/admin/invoice_list";
 import InvoiceDetailPage from "../pages/admin/invoice_detail";
+import PaymentResult from "../pages/admin/payment_result";
 import Unauthorized from "../pages/unauthorized";
 
 function HomeRedirect() {
@@ -94,6 +95,7 @@ function AppRoutes() {
                 <Route path="/enroll-student" element={<EnrollStudent />}></Route>
                 <Route path="/admin/invoices" element={<InvoiceListPage />}></Route>
                 <Route path="/admin/invoices/:id" element={<InvoiceDetailPage />}></Route>
+                <Route path="/payment/result" element={<PaymentResult />}></Route>
               </Route>
             </Route>
           </Route>
