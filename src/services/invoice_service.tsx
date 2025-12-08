@@ -1,0 +1,61 @@
+import { axiosClient } from "../api/axios_client";
+import { ApiResponse } from "../model/api_respone";
+import { InvoiceResponse, InvoiceListResponse } from "../model/invoice_model";
+
+/**
+ * Lấy danh sách hóa đơn với phân trang, lọc và tìm kiếm
+ */
+export const getAllInvoices = async (
+  page: number,
+  size: number,
+  status?: boolean | null,
+  keyword?: string | null
+) => {
+  try {
+    const params: any = { page, size };
+    
+    if (status !== null && status !== undefined) {
+      params.status = status;
+    }
+    
+    if (keyword && keyword.trim()) {
+      params.keyword = keyword.trim();
+    }
+    
+    const response = await axiosClient.get<ApiResponse<InvoiceListResponse>>(
+      "/orders",
+      { params }
+    );
+    
+    if (response.data && response.data.code === 1000 && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data?.message || "Lấy danh sách hóa đơn thất bại");
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Lấy danh sách hóa đơn API error:", message);
+    throw new Error(message);
+  }
+};
+
+/**
+ * Lấy chi tiết hóa đơn theo ID
+ */
+export const getInvoiceById = async (id: number) => {
+  try {
+    const response = await axiosClient.get<ApiResponse<InvoiceResponse>>(
+      `/orders/${id}`
+    );
+    
+    if (response.data && response.data.code === 1000 && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data?.message || "Lấy chi tiết hóa đơn thất bại");
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Lấy chi tiết hóa đơn API error:", message);
+    throw new Error(message);
+  }
+};

@@ -15,7 +15,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import logo from "../img/logo.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBook, faCalendar, faChalkboardUser, faTicket, faUsers, faUserTie, faList, faDoorOpen } from "@fortawesome/free-solid-svg-icons";
+import { faBook, faCalendar, faChalkboardUser, faTicket, faUsers, faUserTie, faList, faDoorOpen, faUserPlus, faReceipt } from "@fortawesome/free-solid-svg-icons";
 
 const drawerWidth = 280;
 
@@ -25,6 +25,8 @@ const navItems = [
   { text: "Lớp học", icon: <FontAwesomeIcon icon={faChalkboardUser} />, path: "/class" },
   { text: "Ca học", icon: <FontAwesomeIcon icon={faCalendar} />, path: "/schedule" },
   { text: "Học viên", icon: <FontAwesomeIcon icon={faUsers} />, path: "/students" },
+  { text: "Đăng ký cho học viên", icon: <FontAwesomeIcon icon={faUserPlus} />, path: "/enroll-student" },
+  { text: "Hóa đơn", icon: <FontAwesomeIcon icon={faReceipt} />, path: "/admin/invoices" },
   { text: "Giảng viên", icon: <FontAwesomeIcon icon={faUserTie} />, path: "/teachers" },
   { text: "Khuyến mãi", icon: <FontAwesomeIcon icon={faTicket} />, path: "/promotions" },
   { text: "Danh mục", icon: <FontAwesomeIcon icon={faList} />, path: "/categories" },

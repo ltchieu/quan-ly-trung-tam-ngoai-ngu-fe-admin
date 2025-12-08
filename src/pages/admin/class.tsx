@@ -46,14 +46,12 @@ import {
   getCourseFilterList,
   getLecturerFilterList,
   getRoomFilterList,
-  addStudentToClass,
 } from "../../services/class_service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEdit,
   faMagnifyingGlass,
   faTrash,
-  faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import SuggestionDialog from "../../component/suggestion_dialog";
 import {
@@ -66,7 +64,6 @@ import {
 import useDebounce from "../../hook/useDebounce";
 import { ScheduleAlternative } from "../../model/schedule_model";
 import ConfirmUpdateDialog from "../../component/confirm_update_dialog";
-import AddStudentDialog from "../../component/add_student_dialog";
 
 interface FilterState {
   lecturer: number | null;
@@ -151,10 +148,6 @@ const ClassListPage: React.FC = () => {
     null
   );
   const [targetClassId, setTargetClassId] = useState<number | null>(null);
-
-  // State cho Add Student Dialog
-  const [addStudentDialogOpen, setAddStudentDialogOpen] = useState(false);
-  const [selectedClassIdForAddStudent, setSelectedClassIdForAddStudent] = useState<number | null>(null);
 
   // State sắp xếp
   const [order, setOrder] = useState<Order>("asc");
@@ -372,24 +365,6 @@ const ClassListPage: React.FC = () => {
     (property: keyof ClassView) => (event: React.MouseEvent<unknown>) => {
       handleRequestSort(property);
     };
-
-  const handleOpenAddStudentDialog = (classId: number) => {
-    setSelectedClassIdForAddStudent(classId);
-    setAddStudentDialogOpen(true);
-  };
-
-  const handleAddStudent = async (studentId: number) => {
-    if (!selectedClassIdForAddStudent) return;
-    try {
-      await addStudentToClass(selectedClassIdForAddStudent, studentId);
-      setSuccessMsg("Thêm học viên thành công!");
-      setOpenSnackbar(true);
-      fetchData();
-    } catch (error: any) {
-      console.error("Failed to add student:", error);
-      alert(error.message);
-    }
-  };
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -630,18 +605,6 @@ const ClassListPage: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell align="center">
-                        {lop.currentEnrollment < lop.maxCapacity && (
-                          <Tooltip title="Thêm học viên">
-                            <IconButton
-                              size="small"
-                              color="success"
-                              onClick={() => handleOpenAddStudentDialog(lop.classId)}
-                            >
-                              <FontAwesomeIcon icon={faUserPlus} />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-
                         <Tooltip title="Chỉnh sửa lớp học">
                           <IconButton
                             size="small"
@@ -712,13 +675,6 @@ const ClassListPage: React.FC = () => {
         onConfirm={handleConfirmUpdate}
         originalClassId={targetClassId}
         selectedAlternative={selectedAlt}
-      />
-
-      <AddStudentDialog
-        open={addStudentDialogOpen}
-        onClose={() => setAddStudentDialogOpen(false)}
-        onAdd={handleAddStudent}
-        classId={selectedClassIdForAddStudent}
       />
 
       {/* --- SNACKBAR HIỂN THỊ THÀNH CÔNG --- */}

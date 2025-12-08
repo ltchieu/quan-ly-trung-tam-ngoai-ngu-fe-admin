@@ -34,6 +34,9 @@ import TeacherScoreManagement from "../pages/teacher/score_management";
 import CategoryPage from "../pages/admin/category_page";
 import RoomPage from "../pages/admin/room_page";
 import RoomDetailPage from "../pages/admin/room_detail";
+import EnrollStudent from "../pages/admin/enroll_student";
+import InvoiceListPage from "../pages/admin/invoice_list";
+import InvoiceDetailPage from "../pages/admin/invoice_detail";
 import Unauthorized from "../pages/unauthorized";
 
 function HomeRedirect() {
@@ -88,6 +91,9 @@ function AppRoutes() {
                 <Route path="/categories" element={<CategoryPage />}></Route>
                 <Route path="/rooms" element={<RoomPage />}></Route>
                 <Route path="/rooms/:id" element={<RoomDetailPage />}></Route>
+                <Route path="/enroll-student" element={<EnrollStudent />}></Route>
+                <Route path="/admin/invoices" element={<InvoiceListPage />}></Route>
+                <Route path="/admin/invoices/:id" element={<InvoiceDetailPage />}></Route>
               </Route>
             </Route>
           </Route>

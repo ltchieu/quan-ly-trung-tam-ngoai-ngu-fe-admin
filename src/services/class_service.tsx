@@ -111,7 +111,7 @@ export const filterClasses = async (
         courseId: courseId || null,
         className: searchTerm || null,
         page: page,
-        size: size
+        size: size,
       },
     });
     return response.data;
@@ -123,11 +123,15 @@ export const filterClasses = async (
 
 export const getClassDetail = async (id: number | string) => {
   try {
-    const response = await axiosClient.get<ApiResponse<ClassDetailResponse>>(`/courseclasses/${id}`);
+    const response = await axiosClient.get<ApiResponse<ClassDetailResponse>>(
+      `/courseclasses/${id}`
+    );
     if (response.data && response.data.code === 1000 && response.data.data) {
       return response.data.data;
     } else {
-      throw new Error(response.data?.message || "Lấy chi tiết lớp học thất bại");
+      throw new Error(
+        response.data?.message || "Lấy chi tiết lớp học thất bại"
+      );
     }
   } catch (error: any) {
     const message = error.response?.data?.message || error.message;
@@ -136,7 +140,10 @@ export const getClassDetail = async (id: number | string) => {
   }
 };
 
-export const updateClass = async (classId: number | string, request: ClassCreationRequest) => {
+export const updateClass = async (
+  classId: number | string,
+  request: ClassCreationRequest
+) => {
   try {
     const response = await axiosClient.put(`courseclasses/${classId}`, request);
     return response.data;
@@ -148,17 +155,22 @@ export const updateClass = async (classId: number | string, request: ClassCreati
 
 export const getClassesEnrolled = async (page: number, size: number) => {
   try {
-    const response = await axiosClient.get<ApiResponse<ClassResponse>>("/students/get-classes-enrolled", {
-      params: {
-        page,
-        size
+    const response = await axiosClient.get<ApiResponse<ClassResponse>>(
+      "/students/get-classes-enrolled",
+      {
+        params: {
+          page,
+          size,
+        },
       }
-    });
+    );
 
     if (response.data && response.data.code === 1000 && response.data.data) {
       return response.data.data;
     } else {
-      throw new Error(response.data?.message || "Lấy danh sách lớp học thất bại");
+      throw new Error(
+        response.data?.message || "Lấy danh sách lớp học thất bại"
+      );
     }
   } catch (error: any) {
     const message = error.response?.data?.message || error.message;
@@ -169,14 +181,18 @@ export const getClassesEnrolled = async (page: number, size: number) => {
 
 export const getAttendanceBySessionId = async (sessionId: number) => {
   try {
-    const response = await axiosClient.get<ApiResponse<AttendanceSessionResponse>>(`/courseclasses/sessions/${sessionId}/attendance`, {
-      withCredentials: true
+    const response = await axiosClient.get<
+      ApiResponse<AttendanceSessionResponse>
+    >(`/courseclasses/sessions/${sessionId}/attendance`, {
+      withCredentials: true,
     });
     if (response.data && response.data.code === 1000 && response.data.data) {
       console.log("Danh sách điểm danh", response.data.data);
       return response.data.data;
     } else {
-      throw new Error(response.data?.message || "Lấy danh sách điểm danh thất bại");
+      throw new Error(
+        response.data?.message || "Lấy danh sách điểm danh thất bại"
+      );
     }
   } catch (error: any) {
     const message = error.response?.data?.message || error.message;
@@ -185,14 +201,25 @@ export const getAttendanceBySessionId = async (sessionId: number) => {
   }
 };
 
-export const saveAttendance = async (sessionId: number | string, request: AttendanceSessionRequest) => {
+export const saveAttendance = async (
+  sessionId: number | string,
+  request: AttendanceSessionRequest
+) => {
   try {
-    const response = await axiosClient.post<ApiResponse<AttendanceSessionResponse>>(`/lecturers/sessions/${sessionId}/attendance`, request, {
-      withCredentials: true
+    const response = await axiosClient.post<
+      ApiResponse<AttendanceSessionResponse>
+    >(`/lecturers/sessions/${sessionId}/attendance`, request, {
+      withCredentials: true,
     });
-    const statsResponse = response as unknown as { data: ApiResponse<AttendanceStatsResponse> };
+    const statsResponse = response as unknown as {
+      data: ApiResponse<AttendanceStatsResponse>;
+    };
 
-    if (statsResponse.data && statsResponse.data.code === 1000 && statsResponse.data.data) {
+    if (
+      statsResponse.data &&
+      statsResponse.data.code === 1000 &&
+      statsResponse.data.data
+    ) {
       return statsResponse.data.data;
     } else {
       throw new Error(response.data?.message || "Lưu điểm danh thất bại");
@@ -204,17 +231,56 @@ export const saveAttendance = async (sessionId: number | string, request: Attend
   }
 };
 
-export const addStudentToClass = async (classId: number | string, studentId: number | string) => {
+export const registerCourseForStudent = async (
+  studentId: number,
+  classIds: number[],
+  paymentMethodId: number
+) => {
   try {
-    const response = await axiosClient.post(`/courseclasses/${classId}/enroll`, { studentId });
+    const response = await axiosClient.post(
+      `/orders`,
+      { 
+        studentId,
+        classIds,
+        paymentMethodId
+      }
+    );
     if (response.data && response.data.code === 1000) {
       return response.data;
     } else {
-      throw new Error(response.data?.message || "Thêm học viên thất bại");
+      throw new Error(response.data?.message || "Đăng ký khóa học thất bại");
     }
   } catch (error: any) {
     const message = error.response?.data?.message || error.message;
-    console.error("Thêm học viên API error:", message);
+    console.error("Đăng ký khóa học API error:", message);
+    throw new Error(message);
+  }
+};
+
+// Mock payment methods until API is available
+export const getPaymentMethods = async () => {
+  return [
+    { id: 1, name: "Tiền mặt", description: "Thanh toán bằng tiền mặt tại trung tâm" },
+    { id: 2, name: "VNPay", description: "Thanh toán qua cổng VNPay" }
+  ];
+};
+
+// Xác nhận thanh toán tiền mặt
+export const confirmCashPayment = async (invoiceId: number) => {
+  try {
+    const response = await axiosClient.post(
+      `/orders/payment/confirm-cash`,
+      null,
+      { params: { invoiceId } }
+    );
+    if (response.data && response.data.code === 1000) {
+      return response.data;
+    } else {
+      throw new Error(response.data?.message || "Xác nhận thanh toán thất bại");
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Xác nhận thanh toán API error:", message);
     throw new Error(message);
   }
 };
