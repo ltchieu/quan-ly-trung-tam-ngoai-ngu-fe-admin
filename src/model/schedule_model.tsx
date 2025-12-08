@@ -75,6 +75,8 @@ export interface Session {
   note: string;
   schedulePattern: string;
   sessionDate: string;
+  startTime: string; // HH:mm format
+  durationMinutes: number;
 }
 
 export interface Period {

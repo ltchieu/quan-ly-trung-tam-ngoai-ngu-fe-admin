@@ -55,6 +55,19 @@ const mapDayToVN: Record<string, string> = {
   SUNDAY: "Chủ nhật",
 };
 
+// Helper function to calculate end time
+const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const startDate = new Date();
+  startDate.setHours(hours, minutes, 0, 0);
+  
+  const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+  const endHours = String(endDate.getHours()).padStart(2, '0');
+  const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+  
+  return `${endHours}:${endMinutes}`;
+};
+
 const Timetable: React.FC = () => {
   // --- STATE DỮ LIỆU ---
   const [scheduleData, setScheduleData] =
@@ -154,9 +167,9 @@ const Timetable: React.FC = () => {
         <Typography
           variant="caption"
           display="block"
-          sx={{ fontWeight: "bold", color: "#555" }}
+          sx={{ fontWeight: "bold", color: "#1976d2", mb: 0.5 }}
         >
-          {session.courseName}
+          {session.startTime} - {calculateEndTime(session.startTime, session.durationMinutes)}
         </Typography>
         <Typography variant="caption" display="block">
           Phòng: <b>{session.roomName}</b>
