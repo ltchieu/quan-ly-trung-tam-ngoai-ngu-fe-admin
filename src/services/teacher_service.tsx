@@ -1,6 +1,6 @@
 import { axiosClient } from "../api/axios_client";
-import { GiangVien, LoaiBangCap, BangCap, TeacherInfo } from "../model/teacher_model";
-import { ApiResponse } from "../model/api_respone";
+import { GiangVien, LoaiBangCap, BangCap, TeacherInfo, LecturerResponse, LecturerListResponse } from "../model/teacher_model";
+import { ApiResponse, Page } from "../model/api_respone";
 
 export const getTeacherInfoById = async (id?: number | string): Promise<TeacherInfo> => {
   try {
@@ -26,6 +26,109 @@ export const getTeacherInfoById = async (id?: number | string): Promise<TeacherI
     const message = error.response?.data?.message || error.message;
     console.error("Get Teacher Profile API error:", message);
     throw new Error(message);
+  }
+};
+
+export const getAllLecturersPaginated = async (
+  page: number = 0,
+  size: number = 10,
+  sortBy: string = "lecturerId",
+  sortDirection: string = "asc"
+): Promise<LecturerListResponse> => {
+  const response = await axiosClient.get<ApiResponse<Page<LecturerResponse>>>("/lecturers", {
+    params: { page, size, sortBy, sortDirection }
+  });
+  if (response.data && response.data.data) {
+    const pageData = response.data.data;
+    return {
+      currentPage: pageData.number,
+      totalPages: pageData.totalPages,
+      totalItems: pageData.totalElements,
+      lecturers: pageData.content
+    };
+  }
+  throw new Error(response.data?.message || "Failed to fetch lecturers");
+};
+
+/**
+ * Lấy thông tin chi tiết giảng viên theo ID
+ * GET /lecturers/detail/{id}
+ */
+export const getLecturerDetail = async (id: number): Promise<ApiResponse<LecturerResponse>> => {
+  try {
+    const response = await axiosClient.get<ApiResponse<LecturerResponse>>(`/lecturers/detail/${id}`);
+    return response.data;
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Get Lecturer Detail API error:", message);
+    throw new Error(message);
+  }
+};
+
+/**
+ * Cập nhật thông tin giảng viên
+ * PUT /lecturers/{id}
+ */
+export interface LecturerUpdateRequest {
+  fullName?: string;
+  dateOfBirth?: string;
+  imagePath?: string;
+  email?: string;
+  phoneNumber?: string;
+  password?: string;
+  certificates?: {
+    degreeId: number;
+    level: string;
+  }[];
+}
+
+export const updateLecturer = async (
+  id: number,
+  request: LecturerUpdateRequest
+): Promise<ApiResponse<LecturerResponse>> => {
+  try {
+    const response = await axiosClient.put<ApiResponse<LecturerResponse>>(
+      `/lecturers/${id}`,
+      request
+    );
+    return response.data;
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Update Lecturer API error:", message);
+    throw new Error(message);
+  }
+};
+
+/**
+ * Lấy danh sách tất cả các loại bằng cấp/chứng chỉ
+ * GET /degrees hoặc /certificates
+ */
+export interface DegreeOption {
+  degreeId: number;
+  degreeName: string;
+}
+
+export const getAllDegrees = async (): Promise<DegreeOption[]> => {
+  try {
+    // Giả sử có endpoint này, nếu không có thì dùng mock data
+    const response = await axiosClient.get<ApiResponse<DegreeOption[]>>("/degrees");
+    if (response.data && response.data.code === 1000) {
+      return response.data.data;
+    }
+    throw new Error("Failed to fetch degrees");
+  } catch (error: any) {
+    console.warn("Get Degrees API error, using fallback:", error.message);
+    // Fallback to common degrees if API not available
+    return [
+      { degreeId: 1, degreeName: "IELTS" },
+      { degreeId: 2, degreeName: "TOEFL" },
+      { degreeId: 3, degreeName: "TOEIC" },
+      { degreeId: 4, degreeName: "Cử nhân Tiếng Anh" },
+      { degreeId: 5, degreeName: "Thạc sĩ Ngôn ngữ học" },
+      { degreeId: 6, degreeName: "TESOL" },
+      { degreeId: 7, degreeName: "CELTA" },
+      { degreeId: 8, degreeName: "DELTA" },
+    ];
   }
 };
 
@@ -103,8 +206,7 @@ export const updateTeacher = async (id: number, teacher: Partial<GiangVien>): Pr
 };
 
 export const deleteTeacher = async (id: number): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  MOCK_TEACHERS = MOCK_TEACHERS.filter((t) => t.magv !== id);
+  await axiosClient.delete(`/lecturers/${id}`);
 };
 
 

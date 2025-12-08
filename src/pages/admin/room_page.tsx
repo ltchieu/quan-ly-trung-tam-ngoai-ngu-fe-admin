@@ -146,7 +146,7 @@ const RoomPage = () => {
         <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
-                    Room Management
+                    Quản lý phòng
                 </Typography>
                 <Button
                     variant="contained"
@@ -154,7 +154,7 @@ const RoomPage = () => {
                     onClick={() => handleOpenDialog()}
                     sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
                 >
-                    Add New Room
+                    Thêm phòng mới
                 </Button>
             </Box>
 

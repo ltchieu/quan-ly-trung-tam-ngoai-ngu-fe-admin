@@ -6,6 +6,7 @@ import Course from "../pages/admin/course";
 import CreateCoursePage from "../pages/admin/add_course";
 import EditCourse from "../pages/admin/edit_course";
 import ClassListPage from "../pages/admin/class";
+import AddClassPage from "../pages/admin/add_class";
 import Login from "../auth/login";
 import ForgotPassword from "../auth/forgot_password";
 import ResetPassword from "../auth/reset_password";
@@ -72,6 +73,7 @@ function AppRoutes() {
                 <Route path="/addCourse" element={<CreateCoursePage />}></Route>
                 <Route path="/editCourse/:id" element={<EditCourse />}></Route>
                 <Route path="/class" element={<ClassListPage />}></Route>
+                <Route path="/class/add" element={<AddClassPage />}></Route>
                 <Route path="/schedule" element={<Timetable />}></Route>
                 <Route path="/class/edit/:id" element={<EditClass />}></Route>
                 <Route path="/students" element={<Student />}></Route>

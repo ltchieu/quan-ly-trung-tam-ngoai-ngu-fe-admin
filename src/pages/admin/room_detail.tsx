@@ -77,7 +77,7 @@ const RoomDetailPage: React.FC = () => {
                 <Button
                     variant="outlined"
                     startIcon={<ArrowBack />}
-                    onClick={() => navigate("/admin/rooms")}
+                    onClick={() => navigate("/rooms")}
                     sx={{ mt: 2 }}
                 >
                     Quay lại
@@ -96,7 +96,7 @@ const RoomDetailPage: React.FC = () => {
                     href="#"
                     onClick={(e) => {
                         e.preventDefault();
-                        navigate("/admin/rooms");
+                        navigate("/rooms");
                     }}
                 >
                     Quản lý phòng học
@@ -159,64 +159,7 @@ const RoomDetailPage: React.FC = () => {
                 </CardContent>
             </Card>
 
-            {/* Classes Using This Room */}
-            <Card>
-                <CardContent>
-                    <Typography variant="h6" fontWeight="bold" gutterBottom>
-                        Lịch sử sử dụng phòng
-                    </Typography>
-                    {roomDetail.classes && roomDetail.classes.length > 0 ? (
-                        <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
-                            <Table>
-                                <TableHead sx={{ bgcolor: "grey.100" }}>
-                                    <TableRow>
-                                        <TableCell sx={{ fontWeight: "bold" }}>Mã lớp</TableCell>
-                                        <TableCell sx={{ fontWeight: "bold" }}>Tên lớp học</TableCell>
-                                        <TableCell sx={{ fontWeight: "bold" }}>Lịch học</TableCell>
-                                        <TableCell sx={{ fontWeight: "bold" }}>Giờ học</TableCell>
-                                        <TableCell sx={{ fontWeight: "bold" }}>Thời lượng</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {roomDetail.classes.map((cls) => (
-                                        <TableRow key={cls.classId} hover>
-                                            <TableCell>{cls.classId}</TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight="medium">
-                                                    {cls.className}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={cls.schedulePattern}
-                                                    size="small"
-                                                    variant="outlined"
-                                                />
-                                            </TableCell>
-                                            <TableCell>{cls.startTime}</TableCell>
-                                            <TableCell>{cls.durationMinutes} phút</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    ) : (
-                        <Box
-                            sx={{
-                                mt: 2,
-                                p: 3,
-                                textAlign: "center",
-                                bgcolor: "grey.50",
-                                borderRadius: 1,
-                            }}
-                        >
-                            <Typography variant="body2" color="text.secondary">
-                                Phòng này hiện chưa có lớp học nào sử dụng
-                            </Typography>
-                        </Box>
-                    )}
-                </CardContent>
-            </Card>
+            
 
             {/* Snackbar */}
             <Snackbar

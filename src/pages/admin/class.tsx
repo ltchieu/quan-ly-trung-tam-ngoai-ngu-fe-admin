@@ -33,7 +33,7 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
-import CreateClassDialog from "../../component/create_class";
+
 import {
   ClassView,
   CourseFilterData,
@@ -139,7 +139,7 @@ const ClassListPage: React.FC = () => {
   const [totalRows, setTotalRows] = useState(0);
 
   // State cho Dialog
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
 
   //State cho dữ liệu thay đổi trạng thái
   const [suggestionData, setSuggestionData] = useState(null);
@@ -257,9 +257,7 @@ const ClassListPage: React.FC = () => {
     setPage(0);
   };
 
-  const handleCreateSuccess = () => {
-    fetchData();
-  };
+
 
   // const handleChangeClassStatus = async (classId: number) => {
   //   setTargetClassId(classId);
@@ -414,7 +412,7 @@ const ClassListPage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setCreateDialogOpen(true)}
+            onClick={() => navigate("/class/add")}
             sx={{ backgroundColor: "#635bff", borderRadius: 3 }}
           >
             Tạo lớp học mới
@@ -699,11 +697,7 @@ const ClassListPage: React.FC = () => {
         />
       </Paper>
 
-      <CreateClassDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSuccess={handleCreateSuccess}
-      />
+
 
       <SuggestionDialog
         open={openSuggestionDialog}

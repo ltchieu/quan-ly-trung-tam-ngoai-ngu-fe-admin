@@ -15,25 +15,57 @@ import {
   IconButton,
   CardContent,
   Divider,
-  Box
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Badge,
 } from "@mui/material";
-import { School, PhotoCamera, Save, ArrowBack } from "@mui/icons-material";
+import { School, PhotoCamera, Save, ArrowBack, Add, Delete, Close } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
-import { getTeacherInfoById, updateTeacher } from "../../services/teacher_service";
-import { TeacherInfo } from "../../model/teacher_model";
+import { getLecturerDetail, updateLecturer, getAllDegrees, DegreeOption } from "../../services/teacher_service";
+import { LecturerResponse } from "../../model/teacher_model";
 import { getImageUrl, uploadImage } from "../../services/file_service";
+
+interface CertificateFormData {
+  degreeId?: number;
+  certificateName?: string;
+  level: string;
+  isNew?: boolean;
+}
 
 const TeacherDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [teacherInfo, setTeacherInfo] = useState<TeacherInfo | null>(null);
+  const [teacherInfo, setTeacherInfo] = useState<LecturerResponse | null>(null);
+  const [degrees, setDegrees] = useState<DegreeOption[]>([]);
+  const [certificates, setCertificates] = useState<CertificateFormData[]>([]);
+  
+  // Dialog state
+  const [openDialog, setOpenDialog] = useState(false);
+  const [newCertificate, setNewCertificate] = useState<CertificateFormData>({
+    degreeId: 0,
+    level: "",
+  });
+  
+  // Snackbar state
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMsg, setSnackbarMsg] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">("success");
 
   const formik = useFormik({
     initialValues: {
@@ -42,29 +74,58 @@ const TeacherDetailPage: React.FC = () => {
       sdt: "",
       email: "",
       anhdaidien: "",
+      password: "",
     },
     validationSchema: Yup.object({
       hoten: Yup.string().required("Vui lòng nhập họ tên"),
       ngaysinh: Yup.date().required("Vui lòng chọn ngày sinh"),
-      sdt: Yup.string().required("Vui lòng nhập số điện thoại"),
+      sdt: Yup.string()
+        .matches(/^[0-9]{10,11}$/, "Số điện thoại phải là 10-11 chữ số")
+        .required("Vui lòng nhập số điện thoại"),
       email: Yup.string().email("Email không hợp lệ").required("Vui lòng nhập email"),
+      password: Yup.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
     }),
     onSubmit: async (values) => {
       if (!id) return;
       setIsSubmitting(true);
       try {
-        await updateTeacher(Number(id), {
-          hoten: values.hoten,
-          ngaysinh: values.ngaysinh.format("YYYY-MM-DD"),
-          sdt: values.sdt,
+        // Lọc ra certificates mới (có degreeId)
+        const newCertificates = certificates
+          .filter(c => c.degreeId && c.level)
+          .map(c => ({
+            degreeId: c.degreeId!,
+            level: c.level,
+          }));
+
+        const updateRequest = {
+          fullName: values.hoten,
+          dateOfBirth: values.ngaysinh.format("YYYY-MM-DD"),
+          phoneNumber: values.sdt,
           email: values.email,
-          anhdaidien: values.anhdaidien,
-        });
-        alert("Cập nhật giảng viên thành công!");
-        navigate("/teachers");
-      } catch (error) {
-        console.error("Failed to update teacher", error);
-        alert("Có lỗi xảy ra khi cập nhật giảng viên.");
+          imagePath: values.anhdaidien,
+          password: values.password || undefined,
+          // Chỉ gửi certificates nếu có certificate mới, nếu không thì undefined (backend sẽ không cập nhật)
+          certificates: newCertificates.length > 0 ? newCertificates : undefined,
+        };
+
+        const response = await updateLecturer(Number(id), updateRequest);
+        
+        if (response.code === 1000) {
+          setSnackbarMsg("Cập nhật giảng viên thành công!");
+          setSnackbarSeverity("success");
+          setOpenSnackbar(true);
+          
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } else {
+          throw new Error(response.message);
+        }
+      } catch (error: any) {
+        console.error("Lỗi khi cập nhật giảng viên:", error);
+        setSnackbarMsg(error.message || "Có lỗi xảy ra khi cập nhật giảng viên");
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
       } finally {
         setIsSubmitting(false);
       }
@@ -72,30 +133,61 @@ const TeacherDetailPage: React.FC = () => {
   });
 
   useEffect(() => {
-    const fetchTeacher = async () => {
+    const fetchData = async () => {
+      if (!id) {
+        setSnackbarMsg("ID giảng viên không hợp lệ");
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
+        setTimeout(() => navigate("/teachers"), 2000);
+        return;
+      }
+
       setLoading(true);
       try {
-        const info = await getTeacherInfoById(id);
-        if (info) {
-          setTeacherInfo(info);
+        // Load degrees
+        const degreesList = await getAllDegrees();
+        setDegrees(degreesList);
+
+        // Load teacher info
+        const response = await getLecturerDetail(Number(id));
+        if (response.code === 1000 && response.data) {
+          setTeacherInfo(response.data);
           formik.setValues({
-            hoten: info.fullName,
-            ngaysinh: dayjs(info.dateOfBirth),
-            sdt: info.phoneNumber,
-            email: info.email,
-            anhdaidien: info.imagePath,
+            hoten: response.data.fullName,
+            ngaysinh: dayjs(response.data.dateOfBirth),
+            sdt: response.data.phoneNumber,
+            email: response.data.email,
+            anhdaidien: response.data.imagePath || "",
+            password: "",
           });
+          
+          // Load existing certificates
+          if (response.data.certificates && response.data.certificates.length > 0) {
+            setCertificates(
+              response.data.certificates.map(cert => ({
+                certificateName: cert.certificateName,
+                level: cert.level,
+                isNew: false,
+              }))
+            );
+          }
         } else {
-          alert("Không tìm thấy giảng viên");
-          navigate("/teachers");
+          setSnackbarMsg("Không tìm thấy giảng viên");
+          setSnackbarSeverity("error");
+          setOpenSnackbar(true);
+          setTimeout(() => navigate("/teachers"), 2000);
         }
-      } catch (error) {
-        console.error("Failed to fetch teacher", error);
+      } catch (error: any) {
+        console.error("Lỗi khi tải thông tin:", error);
+        setSnackbarMsg(error.message || "Có lỗi xảy ra khi tải thông tin");
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
+        setTimeout(() => navigate("/teachers"), 2000);
       } finally {
         setLoading(false);
       }
     };
-    fetchTeacher();
+    fetchData();
   }, [id]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,17 +196,70 @@ const TeacherDetailPage: React.FC = () => {
       try {
         const fileName = await uploadImage(file);
         formik.setFieldValue("anhdaidien", fileName);
-      } catch (error) {
+        setSnackbarMsg("Upload ảnh thành công!");
+        setSnackbarSeverity("success");
+        setOpenSnackbar(true);
+      } catch (error: any) {
         console.error("Error uploading avatar:", error);
-        alert("Upload ảnh thất bại");
+        setSnackbarMsg(error.message || "Upload ảnh thất bại");
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
       }
     }
   };
 
+  const handleOpenDialog = () => {
+    setNewCertificate({ degreeId: 0, level: "" });
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setNewCertificate({ degreeId: 0, level: "" });
+  };
+
+  const handleAddCertificate = () => {
+    if (!newCertificate.degreeId || !newCertificate.level.trim()) {
+      setSnackbarMsg("Vui lòng chọn loại chứng chỉ và nhập trình độ");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    // Thêm chứng chỉ mới với flag isNew
+    setCertificates([...certificates, { ...newCertificate, isNew: true }]);
+    setSnackbarMsg("Đã thêm chứng chỉ. Nhớ nhấn 'Lưu thay đổi' để cập nhật!");
+    setSnackbarSeverity("success");
+    setOpenSnackbar(true);
+    handleCloseDialog();
+  };
+
+  const handleRemoveCertificate = (index: number) => {
+    setCertificates(certificates.filter((_, i) => i !== index));
+  };
+
+  const getCertificateName = (cert: CertificateFormData): string => {
+    // Nếu có certificateName (từ API) thì dùng luôn
+    if (cert.certificateName) {
+      return cert.certificateName;
+    }
+    // Nếu là certificate mới (có degreeId) thì tìm tên từ degrees list
+    if (cert.degreeId) {
+      const degree = degrees.find(d => d.degreeId === cert.degreeId);
+      return degree ? degree.degreeName : "Unknown";
+    }
+    return "Unknown";
+  };
+
   if (loading) {
     return (
-      <Container sx={{ display: "flex", justifyContent: "center", mt: 5 }}>
-        <CircularProgress />
+      <Container sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+        <Box textAlign="center">
+          <CircularProgress size={60} />
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            Đang tải thông tin...
+          </Typography>
+        </Box>
       </Container>
     );
   }
@@ -162,11 +307,21 @@ const TeacherDetailPage: React.FC = () => {
           <Grid size={{ xs: 12, md: 4 }}>
             <Card sx={{ textAlign: "center", p: 2 }}>
               <CardContent>
-                <Box sx={{ position: "relative", display: "inline-block", mb: 2 }}>
+                <Box sx={{ position: "relative", display: "inline-block", mb: 3 }}>
                   <Avatar
                     src={formik.values.anhdaidien ? getImageUrl(formik.values.anhdaidien) : undefined}
-                    sx={{ width: 120, height: 120, mb: 2, mx: "auto", border: "4px solid white", boxShadow: 2 }}
-                  />
+                    sx={{ 
+                      width: 140, 
+                      height: 140, 
+                      mx: "auto", 
+                      border: "4px solid white", 
+                      boxShadow: 3,
+                      bgcolor: "primary.main",
+                      fontSize: "3rem",
+                    }}
+                  >
+                    {!formik.values.anhdaidien && teacherInfo?.fullName?.charAt(0).toUpperCase()}
+                  </Avatar>
                   <IconButton
                     color="primary"
                     aria-label="upload picture"
@@ -175,9 +330,10 @@ const TeacherDetailPage: React.FC = () => {
                       position: "absolute",
                       bottom: 0,
                       right: 0,
-                      bgcolor: "background.paper",
-                      boxShadow: 1,
-                      "&:hover": { bgcolor: "grey.200" },
+                      bgcolor: "primary.main",
+                      color: "white",
+                      boxShadow: 2,
+                      "&:hover": { bgcolor: "primary.dark" },
                     }}
                   >
                     <input hidden accept="image/*" type="file" onChange={handleAvatarChange} />
@@ -190,80 +346,55 @@ const TeacherDetailPage: React.FC = () => {
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   {teacherInfo?.email}
                 </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  {teacherInfo?.phoneNumber}
+                </Typography>
                 <Chip label="Giảng viên" color="primary" size="small" sx={{ mt: 1 }} />
               </CardContent>
             </Card>
 
-            {/* Account Info Card (Admin Only) */}
-            {teacherInfo?.accountInfo && (
-              <Card sx={{ mt: 3 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    Thông tin tài khoản
-                  </Typography>
-                  <Divider sx={{ mb: 2 }} />
-                  <Stack spacing={1.5}>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">Tên đăng nhập:</Typography>
-                      <Typography variant="body2" fontWeight="medium">{teacherInfo.accountInfo.username}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">Vai trò:</Typography>
-                      <Chip label={teacherInfo.accountInfo.role} size="small" color="info" sx={{ ml: 1 }} />
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">Ngày tạo:</Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {dayjs(teacherInfo.accountInfo.createdAt).format('DD/MM/YYYY HH:mm')}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">Trạng thái xác thực:</Typography>
-                      <Chip 
-                        label={teacherInfo.accountInfo.isVerified ? "Đã xác thực" : "Chưa xác thực"} 
-                        size="small" 
-                        color={teacherInfo.accountInfo.isVerified ? "success" : "warning"} 
-                        sx={{ ml: 1 }} 
-                      />
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </Card>
-            )}
-
+            {/* Statistics Card */}
             <Card sx={{ mt: 3 }}>
               <CardContent>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Bằng cấp & Chứng chỉ
+                  Thống kê
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                  {teacherInfo?.qualifications && teacherInfo.qualifications.length > 0 ? (
-                    teacherInfo.qualifications.map((degree, index) => (
-                      <Chip
-                        key={index}
-                        icon={<School />}
-                        label={`${degree.degreeName} - ${degree.level}`}
-                        variant="outlined"
-                        color="secondary"
-                      />
-                    ))
-                  ) : (
+                <Stack spacing={2}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Typography variant="body2" color="text.secondary">
-                      Chưa có thông tin bằng cấp
+                      Tổng số lớp:
                     </Typography>
-                  )}
-                </Box>
+                    <Chip 
+                      label={teacherInfo?.totalClasses || 0} 
+                      size="small" 
+                      color="default"
+                    />
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Lớp đang dạy:
+                    </Typography>
+                    <Chip 
+                      label={teacherInfo?.activeClasses || 0} 
+                      size="small" 
+                      color="success"
+                    />
+                  </Box>
+                </Stack>
               </CardContent>
             </Card>
+
+            
           </Grid>
 
           {/* Right Column: Detailed Info Form */}
           <Grid size={{ xs: 12, md: 8 }}>
-            <Card>
+            {/* Personal Information Card */}
+            <Card sx={{ boxShadow: "rgba(0, 0, 0, 0.04) 0px 5px 22px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px", borderRadius: 3 }}>
               <CardContent>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Thông tin chi tiết
+                  Thông tin cá nhân
                 </Typography>
                 <Divider sx={{ mb: 3 }} />
                 <Grid container spacing={3}>
@@ -314,11 +445,202 @@ const TeacherDetailPage: React.FC = () => {
                       helperText={formik.touched.email && formik.errors.email}
                     />
                   </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <TextField
+                      fullWidth
+                      type="password"
+                      label="Mật khẩu mới (để trống nếu không đổi)"
+                      name="password"
+                      value={formik.values.password}
+                      onChange={formik.handleChange}
+                      error={formik.touched.password && Boolean(formik.errors.password)}
+                      helperText={formik.touched.password && formik.errors.password}
+                    />
+                  </Grid>
                 </Grid>
+              </CardContent>
+            </Card>
+
+            {/* Certificates Card */}
+            <Card sx={{ mt: 3, boxShadow: "rgba(0, 0, 0, 0.04) 0px 5px 22px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px", borderRadius: 3 }}>
+              <CardContent>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                  <Typography variant="h6" fontWeight="bold">
+                    Chứng chỉ
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<Add />}
+                    onClick={handleOpenDialog}
+                  >
+                    Thêm chứng chỉ
+                  </Button>
+                </Stack>
+                <Divider sx={{ mb: 2 }} />
+                
+                {/* Existing Certificates */}
+                <Stack spacing={1.5}>
+                  {certificates.length === 0 ? (
+                    <Box textAlign="center" sx={{ py: 4 }}>
+                      <School sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Chưa có chứng chỉ nào
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Nhấn "Thêm chứng chỉ" để bắt đầu
+                      </Typography>
+                    </Box>
+                  ) : (
+                    certificates.map((cert, index) => (
+                      <Box 
+                        key={index}
+                        sx={{
+                          p: 2,
+                          border: "1px solid",
+                          borderColor: cert.isNew ? "warning.main" : "divider",
+                          borderRadius: 2,
+                          backgroundColor: cert.isNew 
+                            ? "rgba(255, 152, 0, 0.08)" 
+                            : "rgba(99, 91, 255, 0.04)",
+                          position: "relative",
+                        }}
+                      >
+                        <Stack direction="row" spacing={2} alignItems="center" textAlign="left">
+                          <School 
+                            color={cert.isNew ? "warning" : "primary"} 
+                            fontSize="small" 
+                          />
+                          <Box sx={{ flex: 1 }}>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Typography variant="body2" fontWeight={600}>
+                                {getCertificateName(cert)}
+                              </Typography>
+                              {cert.isNew && (
+                                <Chip 
+                                  label="Chưa lưu" 
+                                  size="small" 
+                                  color="warning"
+                                  sx={{ 
+                                    height: 20,
+                                    fontSize: "0.7rem",
+                                    fontWeight: 600,
+                                  }}
+                                />
+                              )}
+                            </Stack>
+                            <Typography variant="caption" color="text.secondary">
+                              Trình độ: {cert.level}
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleRemoveCertificate(index)}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </Box>
+                    ))
+                  )}
+                </Stack>
+
+                {/* Warning for unsaved certificates */}
+                {certificates.some(c => c.isNew) && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    Có chứng chỉ chưa được lưu! Nhấn nút "Lưu thay đổi" ở trên để cập nhật.
+                  </Alert>
+                )}
               </CardContent>
             </Card>
           </Grid>
         </Grid>
+
+        {/* Add Certificate Dialog */}
+        <Dialog 
+          open={openDialog} 
+          onClose={handleCloseDialog}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6" fontWeight="bold">
+                Thêm Chứng chỉ mới
+              </Typography>
+              <IconButton size="small" onClick={handleCloseDialog}>
+                <Close />
+              </IconButton>
+            </Stack>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={3} sx={{ pt: 1 }}>
+              <FormControl fullWidth>
+                <InputLabel>Loại chứng chỉ *</InputLabel>
+                <Select
+                  value={newCertificate.degreeId || ""}
+                  label="Loại chứng chỉ *"
+                  onChange={(e) =>
+                    setNewCertificate({ ...newCertificate, degreeId: Number(e.target.value) })
+                  }
+                >
+                  <MenuItem value="">
+                    <em>Chọn loại chứng chỉ</em>
+                  </MenuItem>
+                  {degrees.map((degree) => (
+                    <MenuItem key={degree.degreeId} value={degree.degreeId}>
+                      {degree.degreeName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
+                label="Trình độ/Level *"
+                placeholder="VD: 8.0, C1, Advanced, Giỏi..."
+                value={newCertificate.level}
+                onChange={(e) =>
+                  setNewCertificate({ ...newCertificate, level: e.target.value })
+                }
+                helperText="Nhập trình độ hoặc điểm số của chứng chỉ"
+              />
+
+              <Alert severity="info">
+                Chứng chỉ sẽ được thêm vào danh sách preview. Nhớ nhấn "Lưu thay đổi" để cập nhật vào hệ thống.
+              </Alert>
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={handleCloseDialog} variant="outlined">
+              Hủy
+            </Button>
+            <Button 
+              onClick={handleAddCertificate} 
+              variant="contained"
+              startIcon={<Add />}
+            >
+              Thêm chứng chỉ
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Snackbar */}
+        <Snackbar
+          open={openSnackbar}
+          autoHideDuration={4000}
+          onClose={() => setOpenSnackbar(false)}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <Alert 
+            severity={snackbarSeverity} 
+            onClose={() => setOpenSnackbar(false)}
+            sx={{ borderRadius: 2 }}
+          >
+            {snackbarMsg}
+          </Alert>
+        </Snackbar>
       </Container>
     </LocalizationProvider>
   );

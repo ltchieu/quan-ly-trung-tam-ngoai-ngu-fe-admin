@@ -62,3 +62,30 @@ export interface TeacherInfo {
   
   qualifications: QualificationDTO[];
 }
+
+export interface CertificateInfo {
+  certificateId: number;
+  certificateName: string;
+  level: string;
+}
+
+export interface LecturerResponse {
+  lecturerId: number;
+  fullName: string;
+  dateOfBirth: string;
+  imagePath: string;
+  userId: number;
+  username: string;
+  email: string;
+  phoneNumber: string;
+  totalClasses: number;
+  activeClasses: number;
+  certificates: CertificateInfo[];
+}
+
+export interface LecturerListResponse {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  lecturers: LecturerResponse[];
+}

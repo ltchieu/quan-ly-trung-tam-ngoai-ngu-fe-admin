@@ -20,32 +20,47 @@ import {
   Link,
   CircularProgress,
   TablePagination,
+  Chip,
+  Tooltip,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate } from "react-router-dom";
-import { GiangVien } from "../../model/teacher_model";
-import { getAllTeachers, deleteTeacher } from "../../services/teacher_service";
+import { LecturerResponse } from "../../model/teacher_model";
+import { getAllLecturersPaginated, deleteTeacher } from "../../services/teacher_service";
+import useDebounce from "../../hook/useDebounce";
 
 const TeacherListPage: React.FC = () => {
   const navigate = useNavigate();
-  const [teachers, setTeachers] = useState<GiangVien[]>([]);
+  const [teachers, setTeachers] = useState<LecturerResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
+  
+  // Snackbar state
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMsg, setSnackbarMsg] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">("success");
+
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const fetchTeachers = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const result = await getAllTeachers(page, rowsPerPage, searchTerm);
-      setTeachers(result.data);
-      setTotal(result.total);
-    } catch (error) {
-      console.error("Failed to fetch teachers", error);
+      const result = await getAllLecturersPaginated(page, rowsPerPage, "lecturerId", "asc");
+      setTeachers(result.lecturers);
+      setTotal(result.totalItems);
+    } catch (error: any) {
+      console.error("Lỗi khi tải danh sách giảng viên:", error);
+      setError(error.message || "Có lỗi xảy ra khi tải dữ liệu");
     } finally {
       setLoading(false);
     }
@@ -53,7 +68,7 @@ const TeacherListPage: React.FC = () => {
 
   useEffect(() => {
     fetchTeachers();
-  }, [page, rowsPerPage, searchTerm]);
+  }, [page, rowsPerPage, debouncedSearchTerm]);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -73,146 +88,291 @@ const TeacherListPage: React.FC = () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa giảng viên này?")) {
       try {
         await deleteTeacher(id);
+        setSnackbarMsg("Xóa giảng viên thành công!");
+        setSnackbarSeverity("success");
+        setOpenSnackbar(true);
         fetchTeachers();
-      } catch (error) {
-        console.error("Failed to delete teacher", error);
+      } catch (error: any) {
+        console.error("Lỗi khi xóa giảng viên:", error);
+        setSnackbarMsg(error.message || "Xóa giảng viên thất bại!");
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
       }
     }
   };
 
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      {/* Breadcrumbs */}
-      <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
-        <Link underline="hover" color="inherit" href="/">
-          Dashboard
-        </Link>
-        <Typography color="text.primary">Quản lý Giảng viên</Typography>
-      </Breadcrumbs>
+    <Box sx={{ bgcolor: "#f8f9fa", minHeight: "100vh", py: 4 }}>
+      <Container maxWidth="xl">
+        {/* Breadcrumbs */}
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
+          <Link 
+            underline="hover" 
+            color="inherit" 
+            href="/"
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            Dashboard
+          </Link>
+          <Typography color="text.primary" fontWeight={500}>
+            Quản lý Giảng viên
+          </Typography>
+        </Breadcrumbs>
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        alignItems="center"
-        spacing={2}
-        sx={{ mb: 3 }}
-      >
-        <Typography variant="h4" fontWeight="bold">
-          Danh sách Giảng viên
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate("/teachers/add")}
+        {/* Header Section */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "stretch", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 3 }}
         >
-          Thêm Giảng viên
-        </Button>
-      </Stack>
+          <Box>
+            <Typography variant="h4" fontWeight="bold" gutterBottom>
+              Danh sách Giảng viên
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Quản lý thông tin và chứng chỉ của giảng viên
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate("/teachers/add")}
+            sx={{ 
+              minWidth: { xs: "100%", sm: "auto" },
+              height: 40,
+            }}
+          >
+            Thêm Giảng viên
+          </Button>
+        </Stack>
 
-      <Card sx={{ p: 2, mb: 3 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Tìm kiếm giảng viên..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
+        {/* Error Alert */}
+        {error && (
+          <Alert 
+            severity="error" 
+            sx={{ mb: 3, borderRadius: 2 }}
+            onClose={() => setError(null)}
+          >
+            {error}
+          </Alert>
+        )}
+
+        {/* Search Bar */}
+        <Card 
+          sx={{ 
+            p: 2.5, 
+            mb: 3,
+            boxShadow: "rgba(0, 0, 0, 0.04) 0px 5px 22px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px",
+            borderRadius: 3,
           }}
-        />
-      </Card>
+        >
+          <TextField
+            fullWidth
+            placeholder="Tìm kiếm theo tên, email hoặc số điện thoại..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "#fff",
+              },
+            }}
+          />
+        </Card>
 
-      <TableContainer component={Card}>
-        <Table>
-          <TableHead sx={{ backgroundColor: "#f5f5f5" }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: "bold" }}>Giảng viên</TableCell>
-              <TableCell sx={{ fontWeight: "bold" }}>Liên hệ</TableCell>
-              <TableCell sx={{ fontWeight: "bold" }}>Trình độ</TableCell>
-              <TableCell sx={{ fontWeight: "bold" }} align="center">
-                Thao tác
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                  <CircularProgress />
-                </TableCell>
-              </TableRow>
-            ) : teachers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                  <Typography color="text.secondary">
-                    Không tìm thấy giảng viên nào.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              teachers.map((teacher) => (
-                <TableRow key={teacher.magv} hover>
-                  <TableCell>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <Avatar src={teacher.anhdaidien} alt={teacher.hoten} />
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight="bold">
-                          {teacher.hoten}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {teacher.gioitinh ? "Nam" : "Nữ"} - {teacher.ngaysinh}
-                        </Typography>
-                      </Box>
-                    </Stack>
+        {/* Data Table */}
+        <Card
+          sx={{
+            boxShadow: "rgba(0, 0, 0, 0.04) 0px 5px 22px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px",
+            borderRadius: 3,
+            overflow: "hidden",
+          }}
+        >
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: "#f9fafb" }}>
+                  <TableCell sx={{ fontWeight: 600, color: "#667085" }}>
+                    Giảng viên
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{teacher.email}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {teacher.sdt}
-                    </Typography>
+                  <TableCell sx={{ fontWeight: 600, color: "#667085" }}>
+                    Liên hệ
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {teacher.bangCaps && teacher.bangCaps.length > 0
-                        ? teacher.bangCaps.map((d) => d.loaiBangCap?.ten).join(", ")
-                        : "Chưa cập nhật"}
-                    </Typography>
+                  <TableCell sx={{ fontWeight: 600, color: "#667085" }} align="center">
+                    Lớp học
                   </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      color="primary"
-                      onClick={() => navigate(`/teachers/${teacher.magv}`)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      onClick={() => handleDelete(teacher.magv)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                  <TableCell sx={{ fontWeight: 600, color: "#667085" }} align="center">
+                    Thao tác
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
-        component="div"
-        count={total}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
-    </Container >
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
+                      <CircularProgress size={40} />
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                        Đang tải dữ liệu...
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : teachers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
+                      <Typography variant="body1" color="text.secondary">
+                        {searchTerm 
+                          ? "Không tìm thấy giảng viên phù hợp." 
+                          : "Chưa có giảng viên nào."}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  teachers.map((teacher) => (
+                    <TableRow 
+                      key={teacher.lecturerId} 
+                      hover
+                      sx={{
+                        "&:hover": {
+                          backgroundColor: "rgba(99, 91, 255, 0.04)",
+                        },
+                      }}
+                    >
+                      <TableCell>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Avatar 
+                            src={teacher.imagePath} 
+                            alt={teacher.fullName}
+                            sx={{ 
+                              width: 48, 
+                              height: 48,
+                              bgcolor: "primary.main",
+                            }}
+                          >
+                            {teacher.fullName.charAt(0).toUpperCase()}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight={600}>
+                              {teacher.fullName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {teacher.dateOfBirth}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                          {teacher.email}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {teacher.phoneNumber}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                          <Chip
+                            label={`${teacher.activeClasses || 0} đang dạy`}
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            sx={{ 
+                              borderRadius: 1.5,
+                              fontWeight: 500,
+                            }}
+                          />
+                          <Chip
+                            label={`${teacher.totalClasses || 0} tổng`}
+                            size="small"
+                            color="default"
+                            variant="outlined"
+                            sx={{ 
+                              borderRadius: 1.5,
+                              fontWeight: 500,
+                            }}
+                          />
+                        </Stack>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Tooltip title="Xem chi tiết">
+                          <IconButton
+                            color="primary"
+                            onClick={() => navigate(`/teachers/${teacher.lecturerId}`)}
+                            sx={{
+                              backgroundColor: "rgba(99, 91, 255, 0.08)",
+                              "&:hover": { 
+                                backgroundColor: "rgba(99, 91, 255, 0.16)",
+                              },
+                            }}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Xóa giảng viên">
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDelete(teacher.lecturerId)}
+                            sx={{ ml: 1 }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Pagination */}
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            labelRowsPerPage="Số hàng mỗi trang:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} trong tổng số ${count !== -1 ? count : `hơn ${to}`}`
+            }
+            sx={{
+              borderTop: "1px solid",
+              borderColor: "divider",
+              ".MuiTablePagination-select": {
+                borderRadius: 1,
+              },
+            }}
+          />
+        </Card>
+
+        {/* Snackbar */}
+        <Snackbar
+          open={openSnackbar}
+          autoHideDuration={3000}
+          onClose={() => setOpenSnackbar(false)}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <Alert 
+            severity={snackbarSeverity} 
+            onClose={() => setOpenSnackbar(false)}
+            sx={{ borderRadius: 2 }}
+          >
+            {snackbarMsg}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </Box>
   );
 };
 
