@@ -151,14 +151,28 @@ export const getRecentActivities = async (limit: number = 10): Promise<ActivityR
     return response.data.data as ActivityResponse[];
 };
 
+export const getCourseProgress = async (): Promise<CourseProgressData[]> => {
+    const response = await axiosClient.get("/admin/dashboard/course-progress");
+    return response.data.data as CourseProgressData[];
+};
+
+export const getEndingClasses = async (): Promise<EndingClassData[]> => {
+    const response = await axiosClient.get("/admin/dashboard/ending-classes");
+    return response.data.data as EndingClassData[];
+};
+
 // --- Service Functions ---
 
 export const getDashboardData = async (): Promise<DashboardData> => {
     try {
-        // Gọi API thật để lấy stats
-        const stats = await getDashboardStats();
+        // Gọi các API song song để tối ưu performance
+        const [stats, courseProgress, endingClasses] = await Promise.all([
+            getDashboardStats(),
+            getCourseProgress().catch(() => MOCK_DASHBOARD_DATA.courseProgress),
+            getEndingClasses().catch(() => MOCK_DASHBOARD_DATA.endingClasses),
+        ]);
         
-        // Map dữ liệu từ API sang format cũ để tương thích với UI hiện tại
+        // Map dữ liệu từ API sang format để tương thích với UI
         const dashboardData: DashboardData = {
             kpi: {
                 revenue: stats.doanhThuThang || 0,
@@ -171,9 +185,10 @@ export const getDashboardData = async (): Promise<DashboardData> => {
             annualRevenue: MOCK_DASHBOARD_DATA.annualRevenue,
             topCourses: MOCK_DASHBOARD_DATA.topCourses,
             paymentMethods: MOCK_DASHBOARD_DATA.paymentMethods,
-            courseProgress: MOCK_DASHBOARD_DATA.courseProgress,
+            // Sử dụng dữ liệu thật từ API
+            courseProgress: courseProgress,
             canceledSessions: MOCK_DASHBOARD_DATA.canceledSessions,
-            endingClasses: MOCK_DASHBOARD_DATA.endingClasses,
+            endingClasses: endingClasses,
             topLecturers: MOCK_DASHBOARD_DATA.topLecturers,
             lecturerDistribution: MOCK_DASHBOARD_DATA.lecturerDistribution,
         };

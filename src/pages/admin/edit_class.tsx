@@ -127,10 +127,16 @@ const EditClass: React.FC = () => {
     setActiveTab(newValue);
   };
 
+  // Check if class has completed sessions (cannot edit)
+  const hasCompletedSessions = useMemo(() => {
+    if (!classDetail?.sessions) return false;
+    return classDetail.sessions.some(session => session.status === 'Completed');
+  }, [classDetail]);
+
   // --- FORMIK SETUP ---
   const formik = useFormik({
     initialValues: {
-      courseId: "",
+      courseId: 0,
       courseName: "",
       className: "",
       startDate: "",
@@ -190,7 +196,7 @@ const EditClass: React.FC = () => {
           startDate: values.startDate,
           minutesPerSession: Number(values.durationMinutes),
         };
-
+        console.log("Submitting data:", requestData);
         await updateClass(id, requestData);
         alert("Cập nhật lớp học thành công!");
         navigate(-1);
@@ -262,7 +268,7 @@ const EditClass: React.FC = () => {
           : "";
 
         const initialValues = {
-          courseId: "0",
+          courseId: Number(data.courseId),
           courseName: data.courseName,
           className: data.className,
           startDate: data.startDate,
@@ -459,7 +465,7 @@ const EditClass: React.FC = () => {
             }
             onClick={() => formik.handleSubmit()}
             disabled={
-              isSaving || !formik.values.roomId || !formik.values.lecturerId
+              isSaving || !formik.values.roomId || !formik.values.lecturerId || hasCompletedSessions
             }
           >
             Lưu thay đổi
@@ -473,6 +479,18 @@ const EditClass: React.FC = () => {
             <Tab label="Lịch trình chi tiết" />
           </Tabs>
         </Box>
+
+        {/* Warning when class has started */}
+        {hasCompletedSessions && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" fontWeight="bold">
+              Không thể chỉnh sửa lớp học này
+            </Typography>
+            <Typography variant="body2">
+              Lớp học đã có buổi học hoàn thành. Việc chỉnh sửa thông tin có thể ảnh hưởng đến dữ liệu đã tồn tại.
+            </Typography>
+          </Alert>
+        )}
 
         {/* TAB 1: THÔNG TIN CHUNG */}
         <div role="tabpanel" hidden={activeTab !== 0}>
@@ -518,6 +536,7 @@ const EditClass: React.FC = () => {
                         name="durationMinutes"
                         value={formik.values.durationMinutes}
                         onChange={handleManualChange}
+                        disabled={hasCompletedSessions}
                         error={Boolean(formik.errors.durationMinutes)}
                         helperText={formik.errors.durationMinutes}
                       />
@@ -527,6 +546,7 @@ const EditClass: React.FC = () => {
                       <Grid size={{ xs: 6 }}>
                         <TimePicker
                           label="Giờ bắt đầu"
+                          disabled={hasCompletedSessions}
                           value={
                             formik.values.startTime
                               ? dayjs(formik.values.startTime, "HH:mm")
@@ -557,6 +577,7 @@ const EditClass: React.FC = () => {
                     <Grid size={{ xs: 12, md: 4 }}>
                       <DatePicker
                         label="Ngày bắt đầu"
+                        disabled={hasCompletedSessions}
                         value={
                           formik.values.startDate
                             ? dayjs(formik.values.startDate)
@@ -604,6 +625,7 @@ const EditClass: React.FC = () => {
                                 control={
                                   <Checkbox
                                     checked={isChecked}
+                                    disabled={hasCompletedSessions}
                                     onChange={(e) =>
                                       handleDayChange(day.value, e.target.checked)
                                     }
@@ -626,7 +648,7 @@ const EditClass: React.FC = () => {
                       <Button
                         variant="outlined"
                         onClick={handleCheckSchedule}
-                        disabled={isChecking || !isFormChanged}
+                        disabled={isChecking || !isFormChanged || hasCompletedSessions}
                         fullWidth
                         color={isFormChanged ? "primary" : "inherit"}
                         sx={{
@@ -651,7 +673,7 @@ const EditClass: React.FC = () => {
                         name="roomId"
                         value={formik.values.roomId}
                         onChange={formik.handleChange}
-                        disabled={availableRooms.length === 0}
+                        disabled={availableRooms.length === 0 || hasCompletedSessions}
                         helperText={
                           availableRooms.length === 0
                             ? "Vui lòng kiểm tra lịch trước"
@@ -674,7 +696,7 @@ const EditClass: React.FC = () => {
                         name="lecturerId"
                         value={formik.values.lecturerId}
                         onChange={formik.handleChange}
-                        disabled={availableLecturers.length === 0}
+                        disabled={availableLecturers.length === 0 || hasCompletedSessions}
                         helperText={
                           availableLecturers.length === 0
                             ? "Vui lòng kiểm tra lịch trước"

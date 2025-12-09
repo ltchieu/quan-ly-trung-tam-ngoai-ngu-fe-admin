@@ -207,6 +207,16 @@ const Timetable: React.FC = () => {
       return;
     }
     
+    // Check if session can be canceled (only NotCompleted status)
+    if (selectedSession?.status !== 'NotCompleted') {
+      setNotification({
+        open: true,
+        message: "Chỉ có thể hủy các buổi học chưa diễn ra.",
+        severity: "warning",
+      });
+      return;
+    }
+    
     setCancelDialogOpen(true);
   };
 
@@ -702,15 +712,20 @@ const Timetable: React.FC = () => {
               </ListItemIcon>
               <ListItemText>Thêm buổi học bù</ListItemText>
             </MenuItem>
+          ) : selectedSession?.status === 'NotCompleted' ? (
+            <MenuItem onClick={handleOpenCancelDialog}>
+              <ListItemIcon>
+                <DeleteOutlineIcon fontSize="small" color="error" />
+              </ListItemIcon>
+              <ListItemText>Hủy buổi học</ListItemText>
+            </MenuItem>
           ) : (
-            <>
-              <MenuItem onClick={handleOpenCancelDialog}>
-                <ListItemIcon>
-                  <DeleteOutlineIcon fontSize="small" color="error" />
-                </ListItemIcon>
-                <ListItemText>Hủy buổi học</ListItemText>
-              </MenuItem>
-            </>
+            <MenuItem disabled>
+              <ListItemIcon>
+                <DeleteOutlineIcon fontSize="small" color="disabled" />
+              </ListItemIcon>
+              <ListItemText>Không thể hủy buổi học này</ListItemText>
+            </MenuItem>
           )}
         </Menu>
 

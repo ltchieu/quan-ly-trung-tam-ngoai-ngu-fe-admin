@@ -46,6 +46,16 @@ export const Sidebar: React.FC = () => {
         { text: "Điểm danh", icon: <FontAwesomeIcon icon={faUsers} />, path: "/teacher/attendance" },
       ];
     }
+    if (role === "ACADEMIC_MANAGER") {
+      return [
+        { text: "Overview", icon: <DashboardIcon />, path: "/" },
+        { text: "Khóa học", icon: <FontAwesomeIcon icon={faBook} />, path: "/courses" },
+        { text: "Lớp học", icon: <FontAwesomeIcon icon={faChalkboardUser} />, path: "/class" },
+        { text: "Ca học", icon: <FontAwesomeIcon icon={faCalendar} />, path: "/schedule" },
+        { text: "Đăng ký cho học viên", icon: <FontAwesomeIcon icon={faUserPlus} />, path: "/enroll-student" },
+        { text: "Khuyến mãi", icon: <FontAwesomeIcon icon={faTicket} />, path: "/promotions" },
+      ];
+    }
     // Default to ADMIN items
     return navItems;
   };

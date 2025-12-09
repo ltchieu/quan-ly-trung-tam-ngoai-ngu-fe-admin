@@ -598,11 +598,21 @@ const ClassListPage: React.FC = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={lop.status}
-                          color={getStatusChipColor(Number(lop.status))}
-                          size="small"
-                        />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Chip
+                            label={lop.status}
+                            color={getStatusChipColor(Number(lop.status))}
+                            size="small"
+                          />
+                          {lop.hasPendingMakeup && lop.canceledSessionsCount && lop.canceledSessionsCount > 0 && (
+                            <Chip
+                              label={`${lop.canceledSessionsCount} buổi cần bù`}
+                              color="warning"
+                              size="small"
+                              sx={{ fontWeight: 'bold' }}
+                            />
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell align="center">
                         <Tooltip title="Chỉnh sửa lớp học">

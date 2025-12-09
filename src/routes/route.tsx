@@ -42,7 +42,7 @@ import Unauthorized from "../pages/unauthorized";
 
 function HomeRedirect() {
   const { role } = useAuth();
-  if (role === 'ADMIN') {
+  if (role === 'ADMIN' || role === 'ACADEMIC_MANAGER') {
     return <DashboardPage />;
   } else if (role === 'TEACHER') {
     return <Navigate to="/teacher/dashboard" replace />;
@@ -64,6 +64,27 @@ function AppRoutes() {
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>
               <Route path="/" element={<HomeRedirect />} />
+            </Route>
+          </Route>
+        ) : null}
+
+        {/* Academic Manager Routes - Limited access */}
+        {accessToken ? (
+          <Route element={<RoleBasedRoute allowedRoles={['ACADEMIC_MANAGER']} />}>
+            <Route element={<ProtectedRoute />}>
+              <Route element={<MainLayout />}>
+                <Route path="/courses" element={<Course />}></Route>
+                <Route path="/addCourse" element={<CreateCoursePage />}></Route>
+                <Route path="/editCourse/:id" element={<EditCourse />}></Route>
+                <Route path="/class" element={<ClassListPage />}></Route>
+                <Route path="/class/add" element={<AddClassPage />}></Route>
+                <Route path="/schedule" element={<Timetable />}></Route>
+                <Route path="/class/edit/:id" element={<EditClass />}></Route>
+                <Route path="/enroll-student" element={<EnrollStudent />}></Route>
+                <Route path="/promotions" element={<PromotionListPage />}></Route>
+                <Route path="/promotions/add" element={<AddPromotionPage />}></Route>
+                <Route path="/promotions/:id" element={<PromotionDetailPage />}></Route>
+              </Route>
             </Route>
           </Route>
         ) : null}

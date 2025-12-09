@@ -9,6 +9,9 @@ export interface ClassView {
   status: string;
   maxCapacity: number;
   currentEnrollment: number;
+  tuitionFee?: number;
+  hasPendingMakeup?: boolean;
+  canceledSessionsCount?: number;
 }
 
 export interface CourseFilterData {
@@ -59,6 +62,7 @@ export interface ClassDetailResponse {
   className: string;
   courseName: string;
   schedulePattern: string;
+  courseId: number;
   startTime: string;
   endTime: string;
   minutePerSession: number;
@@ -87,6 +91,9 @@ export interface ClassInfo {
   status: string;
   maxCapacity: number;
   currentEnrollment: number;
+  tuitionFee?: number;
+  hasPendingMakeup?: boolean;
+  canceledSessionsCount?: number;
 }
 
 export interface ClassResponse {
