@@ -35,10 +35,10 @@ const navItems = [
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { role } = useAuth();
+  const { auth } = useAuth();
 
   const getNavItems = () => {
-    if (role === "TEACHER") {
+    if (auth.role === "TEACHER") {
       return [
         { text: "Dashboard", icon: <DashboardIcon />, path: "/teacher/dashboard" },
         { text: "Lịch dạy", icon: <FontAwesomeIcon icon={faCalendar} />, path: "/teacher/schedule" },
@@ -46,7 +46,7 @@ export const Sidebar: React.FC = () => {
         { text: "Điểm danh", icon: <FontAwesomeIcon icon={faUsers} />, path: "/teacher/attendance" },
       ];
     }
-    if (role === "ACADEMIC_MANAGER") {
+    if (auth.role === "ACADEMIC_MANAGER") {
       return [
         { text: "Overview", icon: <DashboardIcon />, path: "/" },
         { text: "Khóa học", icon: <FontAwesomeIcon icon={faBook} />, path: "/courses" },

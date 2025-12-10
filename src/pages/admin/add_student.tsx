@@ -14,11 +14,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { CreateStudentAdminRequest } from "../../model/student_model";
 import { createAdminStudent } from "../../services/student_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import SaveIcon from "@mui/icons-material/Save";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import StudentForm from "../../component/student_form";
 
 const AddStudentPage: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);

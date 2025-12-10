@@ -9,17 +9,28 @@ import { LecturerStats } from "../../component/dashboard/LecturerStats";
 import { RecentActivities } from "../../component/dashboard/RecentActivities";
 import {
   getDashboardData,
-  DashboardData,
 } from "../../services/dashboard_service";
+import { useAuth } from "../../hook/useAuth";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
+import { DashboardData } from "../../model/dashboard_model";
 
 
 const DashboardPage: React.FC = () => {
+  const { auth } = useAuth();
+  useAxiosPrivate();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Chỉ gọi API khi đã có access token
+    if (!auth?.accessToken) {
+      console.log("Waiting for access token...");
+      return;
+    }
+
     const fetchData = async () => {
       try {
+        console.log("Fetching dashboard data with token:", auth.accessToken ? "available" : "missing");
         const result = await getDashboardData();
         setData(result);
       } catch (error) {
@@ -29,7 +40,7 @@ const DashboardPage: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [auth?.accessToken]);
 
   if (loading) {
     return (

@@ -37,8 +37,10 @@ import {
 } from "@mui/icons-material";
 import { getClassDetail } from "../../services/class_service";
 import { ClassDetailResponse, StudentInClass } from "../../model/class_model";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 const TeacherClassDetail: React.FC = () => {
+    useAxiosPrivate();
     const { classId } = useParams<{ classId: string }>();
     const navigate = useNavigate();
     const [classDetail, setClassDetail] = useState<ClassDetailResponse | null>(null);

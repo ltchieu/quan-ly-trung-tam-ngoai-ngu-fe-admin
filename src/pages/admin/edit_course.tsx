@@ -8,12 +8,14 @@ import {
 } from '@mui/material';
 import { ModuleData } from '../../model/module_model';
 import { getCourseDetail } from '../../services/course_service';
+import { useAxiosPrivate } from '../../hook/useAxiosPrivate';
 import EditCurriculum from '../../component/edit_curriculum';
 import EditCourseInfo from '../../component/edit_course_infor';
 import EditContentDetails from '../../component/edit_content_details';
 import { CourseDetailResponse } from '../../model/course_model';
 
 const EditCourse: React.FC = () => {
+    useAxiosPrivate();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 

@@ -13,10 +13,8 @@ import {
     Box,
 } from "@mui/material";
 import { Pie } from "react-chartjs-2";
-import {
-    LecturerProductivityData,
-    LecturerDistributionData,
-} from "../../services/dashboard_service";
+import { LecturerProductivityData, LecturerDistributionData } from "../../model/dashboard_model";
+
 
 interface Props {
     topLecturers: LecturerProductivityData[];

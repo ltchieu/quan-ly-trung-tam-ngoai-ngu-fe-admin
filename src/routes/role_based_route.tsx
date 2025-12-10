@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hook/useAuth';
 
 interface RoleBasedRouteProps {
@@ -7,21 +7,16 @@ interface RoleBasedRouteProps {
 }
 
 const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({ allowedRoles }) => {
-    const { accessToken, role, isLoading } = useAuth();
+    const { auth } = useAuth();
+    const location = useLocation();
 
-    if (isLoading) {
-        return <div>Đang tải...</div>;
-    }
-
-    if (!accessToken) {
-        return <Navigate to="/login" replace />;
-    }
-
-    if (role && !allowedRoles.includes(role)) {
-        return <Navigate to="/unauthorized" replace />;
-    }
-
-    return <Outlet />;
+    return auth?.role && allowedRoles.includes(auth.role) ? (
+        <Outlet />
+    ) : auth?.accessToken ? (
+        <Navigate to="/unauthorized" state={{ from: location }} replace />
+    ) : (
+        <Navigate to="/login" state={{ from: location }} replace />
+    );
 };
 
 export default RoleBasedRoute;

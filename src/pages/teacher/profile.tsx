@@ -30,13 +30,15 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../../hook/useAuth";
 import { getTeacherInfoById, getDegrees, updateMyLecturerInfo } from "../../services/teacher_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 import { TeacherInfo, DegreeDTO } from "../../model/teacher_model";
 import { MenuItem, Select, InputLabel, FormControl } from "@mui/material";
 import { getImageUrl, uploadImage } from "../../services/file_service";
 
 const TeacherProfile: React.FC = () => {
-    const { userId } = useAuth();
+    const { auth } = useAuth();
+    useAxiosPrivate();
     const [profile, setProfile] = useState<TeacherInfo | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [saving, setSaving] = useState<boolean>(false);
@@ -89,7 +91,7 @@ const TeacherProfile: React.FC = () => {
         };
 
         fetchData();
-    }, [userId]);
+    }, [auth.userId]);
 
     const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0] && profile) {

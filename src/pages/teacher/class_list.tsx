@@ -27,10 +27,12 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hook/useAuth";
 import { getClassesEnrolled, getCourseFilterList } from "../../services/class_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import { CourseFilterData } from "../../model/class_model";
 
 const TeacherClassList: React.FC = () => {
-    const { userId } = useAuth();
+    const { auth } = useAuth();
+    useAxiosPrivate();
     const navigate = useNavigate();
     const [classes, setClasses] = useState<any[]>([]);
     const [filteredClasses, setFilteredClasses] = useState<any[]>([]);
@@ -75,7 +77,7 @@ const TeacherClassList: React.FC = () => {
         };
 
         fetchData();
-    }, [userId]);
+    }, [auth.userId]);
 
     // Handle filtering
     useEffect(() => {

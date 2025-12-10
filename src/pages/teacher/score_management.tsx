@@ -28,8 +28,10 @@ import {
 } from "@mui/icons-material";
 import { getClassGrades, saveGrade } from "../../services/score_service";
 import { SCORE_TYPES, GradeRequest, ClassGradesResponse, StudentGradeInfo } from "../../model/score_model";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 const TeacherScoreManagement: React.FC = () => {
+    useAxiosPrivate();
     const { classId } = useParams<{ classId: string }>();
     const navigate = useNavigate();
     const [gradesData, setGradesData] = useState<ClassGradesResponse | null>(null);

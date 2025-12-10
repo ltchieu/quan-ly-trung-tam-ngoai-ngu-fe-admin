@@ -5,7 +5,7 @@ import PeopleIcon from "@mui/icons-material/People";
 import ClassIcon from "@mui/icons-material/Class";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import { SummaryCard } from "../summary_card";
-import { KpiData } from "../../services/dashboard_service";
+import { KpiData } from "../../model/dashboard_model";
 
 interface Props {
     data: KpiData;

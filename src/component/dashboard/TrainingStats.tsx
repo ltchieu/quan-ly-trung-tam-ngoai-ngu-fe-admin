@@ -17,11 +17,7 @@ import {
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
-import {
-    CourseProgressData,
-    EndingClassData,
-} from "../../services/dashboard_service";
-import { CanceledSessionData } from "../../model/dashboard_model";
+import { CanceledSessionData, CourseProgressData, EndingClassData } from "../../model/dashboard_model";
 import { useNavigate } from "react-router-dom";
 
 interface Props {

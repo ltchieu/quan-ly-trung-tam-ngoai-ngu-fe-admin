@@ -38,6 +38,7 @@ import { createPromotion } from "../../services/promotion_service";
 import { PromotionRequest } from "../../model/promotion_model";
 import { getCourseFilterList } from "../../services/class_service";
 import { CourseFilterData } from "../../model/class_model";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 // Hardcoded promotion types matching backend
 const PROMOTION_TYPES = [
@@ -47,6 +48,7 @@ const PROMOTION_TYPES = [
 ];
 
 const AddPromotionPage: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
   const [courses, setCourses] = useState<CourseFilterData[]>([]);
   const [loading, setLoading] = useState(false);

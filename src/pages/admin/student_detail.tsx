@@ -19,6 +19,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { StudentAdminResponse } from "../../model/student_model";
 import { getStudentById, updateStudent } from "../../services/student_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import SaveIcon from "@mui/icons-material/Save";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PersonIcon from "@mui/icons-material/Person";
@@ -27,6 +28,7 @@ import InputFileUpload from "../../component/button_upload_file";
 import { getImageUrl } from "../../services/file_service";
 
 const StudentDetail: React.FC = () => {
+  useAxiosPrivate();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [student, setStudent] = useState<StudentAdminResponse | null>(null);

@@ -12,6 +12,7 @@ import ForgotPassword from "../auth/forgot_password";
 import ResetPassword from "../auth/reset_password";
 import { useAuth } from "../hook/useAuth";
 import ProtectedRoute from "./protected_route";
+import PersistLogin from "../component/persist_login";
 import Timetable from "../pages/admin/schedule";
 import EditClass from "../pages/admin/edit_class";
 import Student from "../pages/admin/student";
@@ -41,10 +42,10 @@ import PaymentResult from "../pages/admin/payment_result";
 import Unauthorized from "../pages/unauthorized";
 
 function HomeRedirect() {
-  const { role } = useAuth();
-  if (role === 'ADMIN' || role === 'ACADEMIC_MANAGER') {
+  const { auth } = useAuth();
+  if (auth.role === 'ADMIN' || auth.role === 'ACADEMIC_MANAGER') {
     return <DashboardPage />;
-  } else if (role === 'TEACHER') {
+  } else if (auth.role === 'TEACHER') {
     return <Navigate to="/teacher/dashboard" replace />;
   } else {
     return <Navigate to="/unauthorized" replace />;
@@ -52,24 +53,21 @@ function HomeRedirect() {
 }
 
 function AppRoutes() {
-  const { accessToken, role, isLoading } = useAuth();
-
-  if (isLoading) return <div>Loading session...</div>;
+  const { auth } = useAuth();
 
   return (
     <div>
       <Routes>
-        {/* Common Authenticated Routes */}
-        {accessToken ? (
+        {/* PersistLogin wraps all protected routes */}
+        <Route element={<PersistLogin />}>
+          {/* Common Authenticated Routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>
               <Route path="/" element={<HomeRedirect />} />
             </Route>
           </Route>
-        ) : null}
 
-        {/* Admin & Academic Manager Routes - Common access */}
-        {accessToken ? (
+          {/* Admin & Academic Manager Routes - Common access */}
           <Route element={<RoleBasedRoute allowedRoles={['ADMIN', 'ACADEMIC_MANAGER']} />}>
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
@@ -99,10 +97,8 @@ function AppRoutes() {
               </Route>
             </Route>
           </Route>
-        ) : null}
 
-        {/* Teacher Routes - For TEACHER and ADMIN roles */}
-        {accessToken ? (
+          {/* Teacher Routes - For TEACHER and ADMIN roles */}
           <Route element={<RoleBasedRoute allowedRoles={['TEACHER', 'ADMIN']} />}>
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
@@ -117,14 +113,13 @@ function AppRoutes() {
               </Route>
             </Route>
           </Route>
-        ) : null}
 
-        {/* Unauthorized page - accessible to all authenticated users */}
-        {accessToken ? (
+          {/* Unauthorized page - accessible to all authenticated users */}
           <Route element={<ProtectedRoute />}>
             <Route path="/unauthorized" element={<Unauthorized />} />
           </Route>
-        ) : null}
+        </Route>
+        {/* End PersistLogin wrapper */}
 
         {/* Login Route */}
         <Route path="/login" element={<Login />}></Route>
@@ -136,7 +131,7 @@ function AppRoutes() {
         {/* Catch-all route */}
         <Route
           path="*"
-          element={<Navigate to={accessToken ? "/" : "/login"} replace />}
+          element={<Navigate to={auth.accessToken ? "/" : "/login"} replace />}
         ></Route>
       </Routes>
     </div>

@@ -11,7 +11,7 @@ import {
     Tooltip,
     Legend,
 } from "chart.js";
-import { RevenueChartData } from "../../services/dashboard_service";
+import { RevenueChartData } from "../../model/dashboard_model";
 
 ChartJS.register(
     CategoryScale,

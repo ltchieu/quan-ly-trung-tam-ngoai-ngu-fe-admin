@@ -30,8 +30,10 @@ import {
     updateCategory,
     deleteCategory
 } from '../../services/course_category_service';
+import { useAxiosPrivate } from '../../hook/useAxiosPrivate';
 
 const CategoryPage = () => {
+    useAxiosPrivate();
     const [categories, setCategories] = useState<CourseCategoryResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

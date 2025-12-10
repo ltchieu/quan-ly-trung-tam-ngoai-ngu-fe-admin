@@ -30,8 +30,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate } from "react-router-dom";
 import { LecturerResponse } from "../../model/teacher_model";
 import { getAllLecturersPaginated, deleteLecturer } from "../../services/teacher_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 const TeacherListPage: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
   const [teachers, setTeachers] = useState<LecturerResponse[]>([]);
   const [loading, setLoading] = useState(true);

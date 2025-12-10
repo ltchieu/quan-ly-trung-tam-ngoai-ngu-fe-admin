@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   Box,
   Button,
+  Checkbox,
+  FormControlLabel,
   Paper,
   TextField,
   Typography,
@@ -72,12 +74,24 @@ const Login = () => {
     password: "",
   });
 
-  const { login } = useAuth();
+  const { setAuth } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDisable, setIsDisable] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isHidePassword, setIsHidePassword] = useState<boolean>(true);
+  const [persist, setPersist] = useState<boolean>(() => {
+    // Migration: chuyển từ trustDevice sang persist
+    const oldTrustDevice = localStorage.getItem("trustDevice");
+    if (oldTrustDevice !== null) {
+      localStorage.removeItem("trustDevice");
+      if (oldTrustDevice === "true") {
+        localStorage.setItem("persist", "true");
+        return true;
+      }
+    }
+    return localStorage.getItem("persist") === "true";
+  });
 
   const navigate = useNavigate();
 
@@ -103,9 +117,20 @@ const Login = () => {
 
     try {
       const loginData = await loginService(loginValue);
-      console.log("Đăng nhập thành công:", loginData);
-      login(loginData);
-      console.log("Access token saved in context:", loginData.accessToken);
+      console.log("✅ Đăng nhập thành công - Backend response:", loginData);
+      
+      // Set auth state
+      setAuth({
+        accessToken: loginData.accessToken,
+        role: loginData.role,
+        userId: loginData.userId,
+      });
+      console.log("✅ Auth state set:", {
+        role: loginData.role,
+        userId: loginData.userId,
+        accessToken: loginData.accessToken?.substring(0, 20) + "...",
+        persist: persist
+      });
 
       if (loginData.role === "TEACHER") {
         navigate("/teacher/dashboard");
@@ -118,6 +143,11 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // Lưu persist vào localStorage khi thay đổi
+  useEffect(() => {
+    localStorage.setItem("persist", persist.toString());
+  }, [persist]);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -255,6 +285,27 @@ const Login = () => {
             </Box>
           </Box>
 
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={persist}
+                onChange={(e) => setPersist(e.target.checked)}
+                sx={{
+                  color: "#0A9396",
+                  "&.Mui-checked": {
+                    color: "#0A9396",
+                  },
+                }}
+              />
+            }
+            label={
+              <Typography variant="body2" color="black">
+                Tin tưởng thiết bị này (giữ đăng nhập khi reload)
+              </Typography>
+            }
+            sx={{ mt: 2, mb: 1 }}
+          />
+
           <Button
             type="submit"
             onClick={handleSubmit}
@@ -266,7 +317,7 @@ const Login = () => {
               textTransform: "none",
               backgroundColor: "#0A9396",
               color: "white",
-              mt: 3,
+              mt: 2,
               fontSize: 20,
             }}
           >

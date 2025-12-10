@@ -23,9 +23,11 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowBack } from "@mui/icons-material";
 import { getRoomById } from "../../services/room_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import { RoomDetailResponse } from "../../model/room_model";
 
 const RoomDetailPage: React.FC = () => {
+    useAxiosPrivate();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [roomDetail, setRoomDetail] = useState<RoomDetailResponse | null>(null);

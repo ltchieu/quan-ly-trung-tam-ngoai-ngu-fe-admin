@@ -32,8 +32,10 @@ import {
     deleteRoom
 } from '../../services/room_service';
 import { useNavigate } from 'react-router-dom';
+import { useAxiosPrivate } from '../../hook/useAxiosPrivate';
 
 const RoomPage = () => {
+    useAxiosPrivate();
     const navigate = useNavigate();
     const [rooms, setRooms] = useState<RoomResponse[]>([]);
     const [loading, setLoading] = useState(true);

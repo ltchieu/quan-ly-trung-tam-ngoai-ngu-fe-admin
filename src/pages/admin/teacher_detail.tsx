@@ -38,6 +38,7 @@ import dayjs from "dayjs";
 import { getLecturerDetail, updateLecturer, getDegrees } from "../../services/teacher_service";
 import { LecturerResponse, DegreeDTO } from "../../model/teacher_model";
 import { getImageUrl, uploadImage } from "../../services/file_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 interface CertificateFormData {
   degreeId?: number;
@@ -48,6 +49,7 @@ interface CertificateFormData {
 }
 
 const TeacherDetailPage: React.FC = () => {
+  useAxiosPrivate();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);

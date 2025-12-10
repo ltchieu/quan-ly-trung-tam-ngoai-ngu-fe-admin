@@ -42,8 +42,10 @@ import {
 } from "../../services/promotion_service";
 import { getCourseFilterList } from "../../services/class_service";
 import { CourseFilterData } from "../../model/class_model";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 const PromotionDetailPage: React.FC = () => {
+  useAxiosPrivate();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [courses, setCourses] = useState<CourseFilterData[]>([]);

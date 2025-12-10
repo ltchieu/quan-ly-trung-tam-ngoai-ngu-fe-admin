@@ -47,6 +47,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import useDebounce from "../../hook/useDebounce";
 import { getCourseFilterList, filterClasses, registerCourseForStudent, getPaymentMethods, confirmCashPayment } from "../../services/class_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import { getAllStudents } from "../../services/student_service";
 import { CourseFilterData, ClassView } from "../../model/class_model";
 import { StudentSearchResult, PaymentMethod } from "../../model/enrollment_model";
@@ -56,6 +57,7 @@ import VNPayPaymentDialog from "../../component/vnpay_payment_dialog";
 const steps = ["Chọn khóa học", "Chọn lớp học", "Chọn học viên", "Chọn phương thức thanh toán", "Xác nhận"];
 
 const EnrollStudent: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   

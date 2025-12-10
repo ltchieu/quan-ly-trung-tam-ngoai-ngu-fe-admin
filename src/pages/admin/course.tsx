@@ -31,6 +31,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import { CourseModel, DanhMuc } from "../../model/course_model";
 import { changeCourseStatus, getAllCourse } from "../../services/course_service";
 import { useNavigate } from "react-router-dom";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import dayjs from "dayjs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare } from "@fortawesome/free-regular-svg-icons";
@@ -38,6 +39,7 @@ import { faLock, faLockOpen, faTrash } from "@fortawesome/free-solid-svg-icons";
 import EditCourse from "./edit_course";
 
 const Course: React.FC = () => {
+  useAxiosPrivate();
   const mockDanhMucList: DanhMuc[] = [
     { madanhmuc: 1, tendm: "IELTS Foundation" },
     { madanhmuc: 2, tendm: "IELTS Advanced" },

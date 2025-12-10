@@ -11,7 +11,7 @@ import {
     TableRow,
     Typography,
 } from "@mui/material";
-import { TopCourseData } from "../../services/dashboard_service";
+import { TopCourseData } from "../../model/dashboard_model";
 
 interface Props {
     data: TopCourseData[];

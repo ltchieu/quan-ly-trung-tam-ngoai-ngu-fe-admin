@@ -45,6 +45,7 @@ import {
 import { Bar } from 'react-chartjs-2';
 import { getLecturerDashboardStats } from "../../services/teacher_service";
 import { LecturerDashboardStatsResponse } from "../../model/teacher_model";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 ChartJS.register(
     CategoryScale,
@@ -56,6 +57,7 @@ ChartJS.register(
 );
 
 const TeacherDashboard: React.FC = () => {
+    useAxiosPrivate();
     const [dashboardData, setDashboardData] = useState<LecturerDashboardStatsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>("");

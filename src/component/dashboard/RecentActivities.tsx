@@ -21,6 +21,7 @@ import {
 } from '@mui/icons-material';
 import { ActivityResponse } from '../../model/dashboard_model';
 import { getRecentActivities } from '../../services/dashboard_service';
+import { useAuth } from '../../hook/useAuth';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
@@ -31,7 +32,7 @@ dayjs.locale('vi');
 interface Props {
   limit?: number;
   autoRefresh?: boolean;
-  refreshInterval?: number; // in seconds
+  refreshInterval?: number;
 }
 
 const getActivityIcon = (type: string) => {
@@ -69,12 +70,19 @@ export const RecentActivities: React.FC<Props> = ({
   autoRefresh = false,
   refreshInterval = 30 
 }) => {
+  const { auth } = useAuth();
   const [activities, setActivities] = useState<ActivityResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchActivities = async () => {
+    if (!auth?.accessToken) {
+      console.log("RecentActivities: Waiting for access token...");
+      return;
+    }
+
     try {
+      console.log("RecentActivities: Fetching with token");
       const data = await getRecentActivities(limit);
       setActivities(data);
       setError(null);
@@ -89,11 +97,11 @@ export const RecentActivities: React.FC<Props> = ({
   useEffect(() => {
     fetchActivities();
 
-    if (autoRefresh) {
+    if (autoRefresh && auth?.accessToken) {
       const interval = setInterval(fetchActivities, refreshInterval * 1000);
       return () => clearInterval(interval);
     }
-  }, [limit, autoRefresh, refreshInterval]);
+  }, [limit, autoRefresh, refreshInterval, auth?.accessToken]);
 
   if (loading) {
     return (

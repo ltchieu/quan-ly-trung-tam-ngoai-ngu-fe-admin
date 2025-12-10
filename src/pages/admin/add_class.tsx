@@ -29,6 +29,7 @@ import * as Yup from "yup";
 import { CourseFilterData } from "../../model/class_model";
 import { createClass, getCourseFilterList } from "../../services/class_service";
 import { checkAndSuggestSchedule } from "../../services/schedule_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import {
   ScheduleSuggestionResponse,
   ScheduleAlternative,
@@ -119,6 +120,7 @@ const formatMonthYear = (dateString: string): string => {
 };
 
 const AddClassPage: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
   const [courses, setCourses] = useState<CourseFilterData[]>([]);
 

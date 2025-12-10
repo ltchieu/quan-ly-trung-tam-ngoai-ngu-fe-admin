@@ -62,6 +62,7 @@ import {
   visuallyHidden,
 } from "../../util/class_util";
 import useDebounce from "../../hook/useDebounce";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import { ScheduleAlternative } from "../../model/schedule_model";
 import ConfirmUpdateDialog from "../../component/confirm_update_dialog";
 
@@ -107,6 +108,7 @@ const filterReducer = (
 };
 
 const ClassListPage: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
 
   // State cho dữ liệu

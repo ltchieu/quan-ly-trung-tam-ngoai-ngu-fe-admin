@@ -12,7 +12,11 @@ export async function loginService(
     );
 
     if (res.data && res.data.code === 1000 && res.data.data) {
-      
+      console.log("🔐 Login response from backend:", {
+        accessToken: res.data.data.accessToken?.substring(0, 20) + "...",
+        role: res.data.data.role,
+        userId: res.data.data.userId,
+      });
       return res.data.data;
     } else {
       throw new Error(
@@ -33,18 +37,20 @@ export async function loginService(
 export async function logoutService(): Promise<boolean> {
   try {
     const response = await axiosClient.post<ApiResponse<any>>(
-      '/auth/logout'
+      'auth/logout'
     );
 
     if (response.data && response.data.code === 1000) {
+      console.log("✅ Logout successful on backend");
       return true;
     } else {
-      console.error("Lỗi khi đăng xuất (backend):", response.data.message);
+      console.warn("⚠️ Backend logout returned non-1000 code:", response.data?.message);
       return false;
     }
   } catch (error: any) {
-    console.error("Lỗi khi đăng xuất (network/auth):", error);
-    return false;
+    // KHÔNG coi đây là lỗi nghiêm trọng - có thể token đã hết hạn
+    console.warn("⚠️ Backend logout failed (expected if token expired):", error.response?.status);
+    return false; // Vẫn cho phép logout ở frontend
   }
 }
 

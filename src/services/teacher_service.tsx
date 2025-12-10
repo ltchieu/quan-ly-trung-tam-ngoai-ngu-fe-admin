@@ -4,17 +4,8 @@ import { ApiResponse, Page } from "../model/api_respone";
 
 export const getTeacherInfoById = async (id?: number | string): Promise<TeacherInfo> => {
   try {
-    const role = localStorage.getItem("role");
-    let url = "";
-
-    if (role?.toUpperCase() === "LECTURER") {
-      url = "/lecturers/me";
-    } else if (role?.toUpperCase() === "ADMIN" && id) {
-      url = `/lecturers/${id}`;
-    } else {
-      if (id) url = `/lecturers/${id}`;
-      else url = "/lecturers/me";
-    }
+    // Nếu có id → get by id, nếu không có id → get current user (me)
+    let url = id ? `/lecturers/${id}` : "/lecturers/me";
 
     const response = await axiosClient.get<ApiResponse<TeacherInfo>>(url);
     if (response.data && response.data.code === 1000 && response.data.data) {

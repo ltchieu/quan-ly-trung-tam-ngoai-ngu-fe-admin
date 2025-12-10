@@ -29,8 +29,10 @@ import { StudentAdminResponse } from "../../model/student_model";
 import { getAllStudents } from "../../services/student_service";
 import { useNavigate } from "react-router-dom";
 import useDebounce from "../../hook/useDebounce";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 const Student: React.FC = () => {
+  useAxiosPrivate();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [students, setStudents] = useState<StudentAdminResponse[]>([]);

@@ -6,15 +6,13 @@ import BlockIcon from "@mui/icons-material/Block";
 
 const Unauthorized: React.FC = () => {
     const navigate = useNavigate();
-    const { role } = useAuth();
+    const { auth } = useAuth();
 
     const handleGoHome = () => {
         // Redirect based on role
-        if (role === "TEACHER") {
+        if (auth.role === "TEACHER") {
             navigate("/teacher/dashboard");
         } else {
-            // For ADMIN or other roles, redirect to login
-            // ADMIN shouldn't normally be on this page due to role protection
             navigate("/login");
         }
     };

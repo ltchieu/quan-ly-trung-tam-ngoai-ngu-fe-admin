@@ -41,6 +41,7 @@ import { getTeacherSchedule } from "../../services/schedule_service";
 import { faAngleLeft, faAngleRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useAuth } from "../../hook/useAuth";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 const PERIODS_ORDER = ["Sáng", "Chiều", "Tối"];
 
@@ -68,7 +69,8 @@ const calculateEndTime = (startTime: string, durationMinutes: number): string =>
 };
 
 const TeacherSchedule: React.FC = () => {
-    const { userId } = useAuth();
+    const { auth } = useAuth();
+    useAxiosPrivate();
 
     // --- STATE DỮ LIỆU ---
     const [scheduleData, setScheduleData] =

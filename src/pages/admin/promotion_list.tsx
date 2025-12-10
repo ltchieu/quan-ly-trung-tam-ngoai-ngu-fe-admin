@@ -28,9 +28,11 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate } from "react-router-dom";
 import { PromotionResponse } from "../../model/promotion_model";
 import { getAllPromotions, deletePromotion } from "../../services/promotion_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import dayjs from "dayjs";
 
 const PromotionListPage: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
   const [promotions, setPromotions] = useState<PromotionResponse[]>([]);
   const [loading, setLoading] = useState(true);

@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardHeader, CardContent, Box } from "@mui/material";
 import { Pie } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { PaymentMethodData } from "../../services/dashboard_service";
+import { PaymentMethodData } from "../../model/dashboard_model";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 

@@ -58,6 +58,7 @@ import {
   getRoomFilterList,
 } from "../../services/class_service";
 import { getWeeklySchedule, cancelSession, addMakeupSession, getSuggestedMakeupDates } from "../../services/schedule_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import { faAngleLeft, faAngleRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -87,6 +88,7 @@ const calculateEndTime = (startTime: string, durationMinutes: number): string =>
 };
 
 const Timetable: React.FC = () => {
+  useAxiosPrivate();
   // Set Vietnamese locale globally
   dayjs.locale('vi');
   

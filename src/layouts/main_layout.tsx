@@ -3,6 +3,7 @@ import React from "react";
 import { Sidebar } from "../component/sidebar";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../hook/useAuth";
+import { useLogout } from "../hook/useLogout";
 import UserMenu from "../component/user_menu";
 
 type Props = {};
@@ -54,10 +55,11 @@ const MainLayout = (props: Props) => {
   };
 
   const navigate = useNavigate();
-  const { accessToken, logout } = useAuth();
+  const { auth } = useAuth();
+  const logout = useLogout();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
   return (
@@ -68,7 +70,7 @@ const MainLayout = (props: Props) => {
         sx={{ flexGrow: 1, py: 2, backgroundColor: "#F9FAFB" }}
       >
         <Box display="flex" justifyContent="flex-end" sx={{ mb: 7, mr: 7 }}>
-          {accessToken ? (
+          {auth?.accessToken ? (
             <UserMenu />
           ) : (
             <Button onClick={() => navigate("/login")} sx={buttonSx}>

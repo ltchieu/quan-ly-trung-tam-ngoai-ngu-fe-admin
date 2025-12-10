@@ -13,6 +13,8 @@ export interface LoginResponse {
 export interface TokenRefreshResponse {
   accessToken: string;
   refreshToken: string;
+  role: string;
+  userId: number;
 }
 
 // Forgot Password & Reset Password Models

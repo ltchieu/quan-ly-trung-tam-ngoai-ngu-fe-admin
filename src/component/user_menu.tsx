@@ -12,12 +12,14 @@ import {
 import { Logout, Person, Settings } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hook/useAuth";
+import { useLogout } from "../hook/useLogout";
 
 const UserMenu: React.FC = () => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     const navigate = useNavigate();
-    const { logout, role } = useAuth();
+    const { auth } = useAuth();
+    const logout = useLogout();
 
     const handleClick = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -27,14 +29,14 @@ const UserMenu: React.FC = () => {
         setAnchorEl(null);
     };
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         navigate("/login");
     };
 
     const handleProfile = () => {
         handleClose();
-        if (role === "TEACHER") {
+        if (auth.role === "TEACHER") {
             navigate("/teacher/profile");
         } else {
             // Handle other roles or default profile
@@ -94,7 +96,7 @@ const UserMenu: React.FC = () => {
                 anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
             >
                 {/* Only show profile for TEACHER role */}
-                {role === "TEACHER" && [
+                {auth.role === "TEACHER" && [
                     <MenuItem key="profile" onClick={handleProfile}>
                         <ListItemIcon>
                             <Person fontSize="small" />

@@ -33,9 +33,11 @@ import {
   faHourglassHalf,
 } from "@fortawesome/free-solid-svg-icons";
 import { getInvoiceById } from "../../services/invoice_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import { InvoiceResponse } from "../../model/invoice_model";
 
 const InvoiceDetailPage: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 

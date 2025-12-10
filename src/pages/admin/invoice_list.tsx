@@ -39,8 +39,10 @@ import {
 import { getAllInvoices } from "../../services/invoice_service";
 import { InvoiceListItem } from "../../model/invoice_model";
 import useDebounce from "../../hook/useDebounce";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 const InvoiceListPage: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
 
   // State cho dữ liệu

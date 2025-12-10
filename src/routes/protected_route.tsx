@@ -1,18 +1,15 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hook/useAuth';
 
 const ProtectedRoute = () => {
-  const { accessToken, isLoading } = useAuth();
+  const { auth } = useAuth();
+  const location = useLocation();
 
-  if (isLoading) {
-    return <div>Đang tải...</div>;
-  }
-
-  if (!accessToken) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <Outlet />;
+  return auth?.accessToken ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/login" state={{ from: location }} replace />
+  );
 };
 
 export default ProtectedRoute;

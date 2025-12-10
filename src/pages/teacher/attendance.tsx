@@ -44,10 +44,12 @@ import {
     getAttendanceBySessionId,
     saveAttendance,
 } from "../../services/class_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import { ClassDetailResponse, SessionInfoDetail, AttendanceSessionRequest } from "../../model/class_model";
 import dayjs from "dayjs";
 
 const TeacherAttendance: React.FC = () => {
+    useAxiosPrivate();
     const { classId } = useParams<{ classId: string }>();
     const navigate = useNavigate();
     const [classDetail, setClassDetail] = useState<ClassDetailResponse | null>(null);

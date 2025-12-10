@@ -23,6 +23,7 @@ import Step3Content from "../../component/add_course_content";
 import { useNavigate } from "react-router-dom";
 import { createNewCourse } from "../../services/course_service";
 import { getImageUrl } from "../../services/file_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import InputFileUpload from "../../component/button_upload_file";
 
 export interface DocumentData {
@@ -61,6 +62,7 @@ export interface NewCourseState {
 }
 
 const CreateCoursePage: React.FC = () => {
+  useAxiosPrivate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 

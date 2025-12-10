@@ -12,10 +12,13 @@ export const setupAxiosInterceptors = (
   const reqInterceptorId = axiosClient.interceptors.request.use(
     (config) => {
       const token = getAccessToken();
-      if (token && !config.headers.Authorization) {
+      const url = config.url || "unknown";
+      
+      if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-      } else if (!token) {
-        console.warn("No access token available for request");
+        console.log(`✅ ${config.method?.toUpperCase()} ${url}: Token attached`);
+      } else {
+        console.log(`⚠️ ${config.method?.toUpperCase()} ${url}: NO TOKEN`);
       }
 
       return config;
@@ -27,20 +30,28 @@ export const setupAxiosInterceptors = (
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
+      const status = error.response?.status;
+      const url = originalRequest?.url || "unknown";
 
+      console.log(`❌ ${status} error on ${url}`);
+
+      // Chỉ retry cho 401/403, KHÔNG phải refreshtoken endpoint, và chưa retry
       if (
-        (error.response?.status === 401 || error.response?.status === 403) &&
+        (status === 401 || status === 403) &&
         !originalRequest._retry &&
-        !originalRequest.url.includes("/auth/refreshtoken")
+        !url.includes("/auth/refreshtoken") &&
+        !url.includes("/auth/login")
       ) {
         originalRequest._retry = true;
+        console.log(`🔄 Attempting token refresh for ${url}...`);
 
         try {
           const newAccessToken = await refreshAccessTokenFn();
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
+          console.log(`✅ Retrying ${url} with new token`);
           return axiosClient(originalRequest);
         } catch (err) {
+          console.log(`❌ Token refresh failed, logging out`);
           logout();
           return Promise.reject(err);
         }

@@ -56,6 +56,7 @@ import {
   getRoomFilterList,
 } from "../../services/class_service";
 import { checkAndSuggestSchedule } from "../../services/schedule_service";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 import {
   ScheduleCheckRequest,
   ScheduleSuggestionResponse,
@@ -98,6 +99,7 @@ const calculateEndTime = (startTimeStr: string, durationMinutes: number) => {
 };
 
 const EditClass: React.FC = () => {
+  useAxiosPrivate();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 

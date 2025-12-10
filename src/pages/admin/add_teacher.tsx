@@ -29,8 +29,10 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
 import { createLecturer, getDegrees } from "../../services/teacher_service";
 import { DegreeDTO } from "../../model/teacher_model";
+import { useAxiosPrivate } from "../../hook/useAxiosPrivate";
 
 const AddTeacherPage: React.FC = () => {
+  useAxiosPrivate();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [degrees, setDegrees] = useState<DegreeDTO[]>([]);
