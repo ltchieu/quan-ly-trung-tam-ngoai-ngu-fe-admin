@@ -94,17 +94,15 @@ const UserMenu: React.FC = () => {
                 anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
             >
                 {/* Only show profile for TEACHER role */}
-                {role === "TEACHER" && (
-                    <>
-                        <MenuItem onClick={handleProfile}>
-                            <ListItemIcon>
-                                <Person fontSize="small" />
-                            </ListItemIcon>
-                            Thông tin cá nhân
-                        </MenuItem>
-                        <Divider />
-                    </>
-                )}
+                {role === "TEACHER" && [
+                    <MenuItem key="profile" onClick={handleProfile}>
+                        <ListItemIcon>
+                            <Person fontSize="small" />
+                        </ListItemIcon>
+                        Thông tin cá nhân
+                    </MenuItem>,
+                    <Divider key="divider" />
+                ]}
                 <MenuItem onClick={handleLogout}>
                     <ListItemIcon>
                         <Logout fontSize="small" />

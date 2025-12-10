@@ -63,10 +63,7 @@ const TeacherAttendanceList: React.FC = () => {
                     startDate: cls.startDate,
                     endDate: cls.endDate,
                     totalStudents: cls.currentEnrollment,
-                    status: cls.status,
-                    progress: 0,
-                    totalSessions: 0,
-                    completedSessions: 0
+                    status: cls.status
                 }));
 
                 setClasses(mappedClasses);
@@ -287,28 +284,6 @@ const TeacherAttendanceList: React.FC = () => {
                                                 </Typography>
                                             </Box>
                                         </Stack>
-
-                                        <Box sx={{ mt: "auto" }}>
-                                            <Box
-                                                sx={{
-                                                    display: "flex",
-                                                    justifyContent: "space-between",
-                                                    mb: 0.5,
-                                                }}
-                                            >
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Tiến độ
-                                                </Typography>
-                                                <Typography variant="caption" fontWeight="bold">
-                                                    {cls.completedSessions}/{cls.totalSessions} buổi ({cls.progress}%)
-                                                </Typography>
-                                            </Box>
-                                            <LinearProgress
-                                                variant="determinate"
-                                                value={cls.progress}
-                                                sx={{ height: 6, borderRadius: 3 }}
-                                            />
-                                        </Box>
                                     </CardContent>
                                     <Box sx={{ p: 2, pt: 0 }}>
                                         <Button

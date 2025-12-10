@@ -44,7 +44,7 @@ import {
     getAttendanceBySessionId,
     saveAttendance,
 } from "../../services/class_service";
-import { ClassDetailResponse, SessionInfoDetail, AttendanceSessionRequest, AttendanceStatsResponse } from "../../model/class_model";
+import { ClassDetailResponse, SessionInfoDetail, AttendanceSessionRequest } from "../../model/class_model";
 import dayjs from "dayjs";
 
 const TeacherAttendance: React.FC = () => {
@@ -54,11 +54,10 @@ const TeacherAttendance: React.FC = () => {
     const [sessions, setSessions] = useState<SessionInfoDetail[]>([]);
     const [selectedSessionId, setSelectedSessionId] = useState<string | number>("");
 
-    // Store local state with status: "PRESENT" | "ABSENT" | "LATE"
     const [attendanceData, setAttendanceData] = useState<{
         studentId: number;
         fullName: string;
-        status: "PRESENT" | "ABSENT" | "LATE";
+        absent: boolean;
         note: string;
     }[]>([]);
 
@@ -66,8 +65,12 @@ const TeacherAttendance: React.FC = () => {
     const [saving, setSaving] = useState<boolean>(false);
     const [attendanceStatus, setAttendanceStatus] = useState<"Taken" | "Not Taken">("Not Taken");
 
-    // Stats state
-    const [stats, setStats] = useState<AttendanceStatsResponse | null>(null);
+    // Stats state - stores attendance statistics from API
+    const [stats, setStats] = useState<{
+        totalStudents: number;
+        presentCount: number;
+        absentCount: number;
+    } | null>(null);
 
     const [notification, setNotification] = useState<{ open: boolean; message: string; severity: "success" | "error" | "warning" }>({
         open: false,
@@ -114,18 +117,27 @@ const TeacherAttendance: React.FC = () => {
                         const mappedData = data.entries.map((entry) => ({
                             studentId: entry.studentId,
                             fullName: entry.studentName,
-                            status: entry.status,
+                            absent: entry.absent,
                             note: entry.note
                         }));
                         setAttendanceData(mappedData);
                         setAttendanceStatus("Taken");
+                        
+                        // Set stats from API response
+                        if (data.totalStudents !== undefined) {
+                            setStats({
+                                totalStudents: data.totalStudents,
+                                presentCount: data.presentCount,
+                                absentCount: data.absentCount
+                            });
+                        }
                     } else {
                         // No attendance data yet - initialize with student list
                         if (classDetail && classDetail.students) {
                             const defaultData = classDetail.students.map((student) => ({
                                 studentId: student.studentId,
                                 fullName: student.fullName,
-                                status: "PRESENT" as const,
+                                absent: false,
                                 note: ""
                             }));
                             setAttendanceData(defaultData);
@@ -157,11 +169,11 @@ const TeacherAttendance: React.FC = () => {
         fetchAttendance();
     }, [selectedSessionId, sessions, classDetail]);
 
-    const handleAttendanceChange = (studentId: number, status: "PRESENT" | "ABSENT" | "LATE") => {
+    const handleAttendanceChange = (studentId: number, absent: boolean) => {
         if (!isEditable) return;
         setAttendanceData((prev) =>
             prev.map((item) =>
-                item.studentId === studentId ? { ...item, status: status } : item
+                item.studentId === studentId ? { ...item, absent: absent } : item
             )
         );
     };
@@ -183,14 +195,21 @@ const TeacherAttendance: React.FC = () => {
                 sessionId: Number(selectedSessionId),
                 entries: attendanceData.map(item => ({
                     studentId: item.studentId,
-                    status: item.status,
+                    absent: item.absent,
                     note: item.note || ""
                 }))
             };
             console.log("attendance request", request);
-            const responseStats = await saveAttendance(selectedSessionId, request);
+            const response = await saveAttendance(selectedSessionId, request);
 
-            setStats(responseStats);
+            // Extract stats from API response
+            if (response && response.totalStudents !== undefined) {
+                setStats({
+                    totalStudents: response.totalStudents,
+                    presentCount: response.presentCount,
+                    absentCount: response.absentCount
+                });
+            }
 
             setSessions(prev => prev.map(s => s.sessionId === selectedSessionId ? { ...s, status: 'Completed' } : s));
             setAttendanceStatus("Taken");
@@ -282,7 +301,7 @@ const TeacherAttendance: React.FC = () => {
             {/* Statistics Section (Visible after save or if stats available - optional if needed on load) */}
             {stats && (
                 <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                         <Card>
                             <CardContent sx={{ textAlign: 'center' }}>
                                 <Typography variant="h6" color="text.secondary">Tổng số</Typography>
@@ -290,7 +309,7 @@ const TeacherAttendance: React.FC = () => {
                             </CardContent>
                         </Card>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                         <Card sx={{ bgcolor: '#e8f5e9' }}>
                             <CardContent sx={{ textAlign: 'center' }}>
                                 <Typography variant="h6" color="success.main">Có mặt</Typography>
@@ -298,19 +317,11 @@ const TeacherAttendance: React.FC = () => {
                             </CardContent>
                         </Card>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                         <Card sx={{ bgcolor: '#ffebee' }}>
                             <CardContent sx={{ textAlign: 'center' }}>
                                 <Typography variant="h6" color="error.main">Vắng mặt</Typography>
                                 <Typography variant="h4" fontWeight="bold" color="error.main">{stats.absentCount}</Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Card sx={{ bgcolor: '#fff3e0' }}>
-                            <CardContent sx={{ textAlign: 'center' }}>
-                                <Typography variant="h6" color="warning.main">Đi muộn</Typography>
-                                <Typography variant="h4" fontWeight="bold" color="warning.main">{stats.lateCount}</Typography>
                             </CardContent>
                         </Card>
                     </Grid>
@@ -448,37 +459,26 @@ const TeacherAttendance: React.FC = () => {
                                                 <TableCell align="center">
                                                     <Stack direction="row" spacing={1} justifyContent="center">
                                                         <Button
-                                                            variant={item.status === "PRESENT" ? "contained" : "outlined"}
+                                                            variant={!item.absent ? "contained" : "outlined"}
                                                             color="success"
                                                             size="small"
-                                                            onClick={() => handleAttendanceChange(item.studentId, "PRESENT")}
-                                                            startIcon={item.status === "PRESENT" ? <CheckCircle /> : <CheckCircleOutline />}
+                                                            onClick={() => handleAttendanceChange(item.studentId, false)}
+                                                            startIcon={!item.absent ? <CheckCircle /> : <CheckCircleOutline />}
                                                             disabled={!isEditable}
-                                                            sx={{ opacity: !isEditable && item.status !== "PRESENT" ? 0.5 : 1 }}
+                                                            sx={{ opacity: !isEditable && item.absent !== false ? 0.5 : 1 }}
                                                         >
                                                             Có mặt
                                                         </Button>
                                                         <Button
-                                                            variant={item.status === "ABSENT" ? "contained" : "outlined"}
+                                                            variant={item.absent ? "contained" : "outlined"}
                                                             color="error"
                                                             size="small"
-                                                            onClick={() => handleAttendanceChange(item.studentId, "ABSENT")}
-                                                            startIcon={item.status === "ABSENT" ? <Cancel /> : <RadioButtonUnchecked />}
+                                                            onClick={() => handleAttendanceChange(item.studentId, true)}
+                                                            startIcon={item.absent ? <Cancel /> : <RadioButtonUnchecked />}
                                                             disabled={!isEditable}
-                                                            sx={{ opacity: !isEditable && item.status !== "ABSENT" ? 0.5 : 1 }}
+                                                            sx={{ opacity: !isEditable && item.absent !== true ? 0.5 : 1 }}
                                                         >
                                                             Vắng
-                                                        </Button>
-                                                        <Button
-                                                            variant={item.status === "LATE" ? "contained" : "outlined"}
-                                                            color="warning"
-                                                            size="small"
-                                                            onClick={() => handleAttendanceChange(item.studentId, "LATE")}
-                                                            startIcon={item.status === "LATE" ? <EventNote /> : <RadioButtonUnchecked />}
-                                                            disabled={!isEditable}
-                                                            sx={{ opacity: !isEditable && item.status !== "LATE" ? 0.5 : 1 }}
-                                                        >
-                                                            Muộn
                                                         </Button>
                                                     </Stack>
                                                 </TableCell>

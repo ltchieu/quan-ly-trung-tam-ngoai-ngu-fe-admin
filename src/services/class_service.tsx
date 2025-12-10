@@ -9,7 +9,6 @@ import {
   RoomFilterData,
   AttendanceSessionResponse,
   AttendanceSessionRequest,
-  AttendanceStatsResponse,
 } from "../model/class_model";
 
 export function getAllClasses(page: number, size: number) {
@@ -196,7 +195,7 @@ export const getAttendanceBySessionId = async (sessionId: number) => {
       withCredentials: true,
     });
     if (response.data && response.data.code === 1000 && response.data.data) {
-      console.log("Danh sách điểm danh", response.data.data);
+      console.log("Fetched attendance session data:", response.data.data);
       return response.data.data;
     } else {
       throw new Error(
@@ -215,21 +214,20 @@ export const saveAttendance = async (
   request: AttendanceSessionRequest
 ) => {
   try {
+    console.log("Saving attendance with request data:", request);
     const response = await axiosClient.post<
       ApiResponse<AttendanceSessionResponse>
     >(`/lecturers/sessions/${sessionId}/attendance`, request, {
       withCredentials: true,
     });
-    const statsResponse = response as unknown as {
-      data: ApiResponse<AttendanceStatsResponse>;
-    };
-
+    console.log("Save attendance response:", response.data);
     if (
-      statsResponse.data &&
-      statsResponse.data.code === 1000 &&
-      statsResponse.data.data
+      response.data &&
+      response.data.code === 1000 &&
+      response.data.data
     ) {
-      return statsResponse.data.data;
+      console.log("Lưu điểm danh thành công:", response.data.data);
+      return response.data.data;
     } else {
       throw new Error(response.data?.message || "Lưu điểm danh thất bại");
     }

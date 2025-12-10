@@ -103,31 +103,24 @@ export interface ClassResponse {
   classes: ClassInfo[];
 }
 
-export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
-
 export interface AttendanceEntryResponse {
   studentId: number;
   studentName: string;
-  status: AttendanceStatus;
+  absent: boolean;
   note: string;
-}
-
-export interface AttendanceStatsResponse {
-  sessionId: number;
-  totalStudents: number;
-  presentCount: number;
-  absentCount: number;
-  lateCount: number;
 }
 
 export interface AttendanceSessionResponse {
   sessionId: number;
   entries: AttendanceEntryResponse[];
+  totalStudents: number;   // Tổng số học viên
+  presentCount: number;    // Số học viên có mặt
+  absentCount: number;     // Số học viên vắng
 }
 
 export interface AttendanceEntryRequest {
   studentId: number;
-  status: AttendanceStatus;
+  absent: boolean;
   note: string;
 }
 
