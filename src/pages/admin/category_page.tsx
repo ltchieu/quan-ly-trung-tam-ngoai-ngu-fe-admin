@@ -53,8 +53,8 @@ const CategoryPage = () => {
     const fetchCategories = async () => {
         try {
             setLoading(true);
-            const response = await getAllCategories();
-            setCategories(response.data);
+            const apiResponse = await getAllCategories();
+            setCategories(apiResponse.data);
         } catch (err) {
             setError('Failed to load categories');
             console.error(err);

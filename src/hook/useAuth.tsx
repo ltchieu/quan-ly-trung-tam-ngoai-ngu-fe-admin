@@ -69,7 +69,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const cleanup = setupAxiosInterceptors(
-      () => accessToken,
+      () => {
+        console.log("Getting access token from state:", accessToken ? "exists" : "null");
+        return accessToken;
+      },
       logout,
       refreshAccessToken
     );

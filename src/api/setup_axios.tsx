@@ -12,8 +12,13 @@ export const setupAxiosInterceptors = (
   const reqInterceptorId = axiosClient.interceptors.request.use(
     (config) => {
       const token = getAccessToken();
+      console.log("Request interceptor - Token:", token ? "exists" : "null");
+      console.log("Request URL:", config.url);
       if (token && !config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log("Authorization header set");
+      } else if (!token) {
+        console.warn("No access token available for request");
       }
 
       return config;

@@ -68,30 +68,9 @@ function AppRoutes() {
           </Route>
         ) : null}
 
-        {/* Academic Manager Routes - Limited access */}
+        {/* Admin & Academic Manager Routes - Common access */}
         {accessToken ? (
-          <Route element={<RoleBasedRoute allowedRoles={['ACADEMIC_MANAGER']} />}>
-            <Route element={<ProtectedRoute />}>
-              <Route element={<MainLayout />}>
-                <Route path="/courses" element={<Course />}></Route>
-                <Route path="/addCourse" element={<CreateCoursePage />}></Route>
-                <Route path="/editCourse/:id" element={<EditCourse />}></Route>
-                <Route path="/class" element={<ClassListPage />}></Route>
-                <Route path="/class/add" element={<AddClassPage />}></Route>
-                <Route path="/schedule" element={<Timetable />}></Route>
-                <Route path="/class/edit/:id" element={<EditClass />}></Route>
-                <Route path="/enroll-student" element={<EnrollStudent />}></Route>
-                <Route path="/promotions" element={<PromotionListPage />}></Route>
-                <Route path="/promotions/add" element={<AddPromotionPage />}></Route>
-                <Route path="/promotions/:id" element={<PromotionDetailPage />}></Route>
-              </Route>
-            </Route>
-          </Route>
-        ) : null}
-
-        {/* Admin Routes - Only for ADMIN role */}
-        {accessToken ? (
-          <Route element={<RoleBasedRoute allowedRoles={['ADMIN']} />}>
+          <Route element={<RoleBasedRoute allowedRoles={['ADMIN', 'ACADEMIC_MANAGER']} />}>
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
                 <Route path="/courses" element={<Course />}></Route>

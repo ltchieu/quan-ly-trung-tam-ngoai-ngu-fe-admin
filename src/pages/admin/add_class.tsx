@@ -200,17 +200,18 @@ const AddClassPage: React.FC = () => {
       setIsCreating(true);
       try {
         const requestData = {
-          courseId: values.courseId,
+          courseId: Number(values.courseId),
           className: values.className,
-          lecturerId: values.lecturerId,
-          roomId: values.roomId,
+          lecturerId: Number(values.lecturerId),
+          roomId: Number(values.roomId),
           schedule: values.schedulePattern,
           startTime: values.startTime,
-          minutesPerSession: values.durationMinutes,
+          minutesPerSession: Number(values.durationMinutes),
           startDate: values.startDate,
         };
-
-        await createClass(requestData);
+        console.log("Creating class with data:", requestData);
+        const response = await createClass(requestData);
+        console.log("Create class response:", response);
         setSuccessMessage(
           "Tạo lớp học thành công! Đang chuyển hướng..."
         );
@@ -219,7 +220,8 @@ const AddClassPage: React.FC = () => {
         }, 1500);
       } catch (error: any) {
         console.error("Lỗi khi tạo lớp:", error);
-        alert(error.message || "Có lỗi xảy ra khi tạo lớp học.");
+        console.error("Error response:", error.response?.data);
+        alert(error.response?.data?.message || error.message || "Có lỗi xảy ra khi tạo lớp học.");
         setIsCreating(false);
       }
     },

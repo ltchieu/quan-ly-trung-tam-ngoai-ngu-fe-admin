@@ -87,7 +87,7 @@ export function createNewCourse(courseData: NewCourseState) {
       })),
     })),
   };
-
+  console.log("Request Data for creating course:", requestData);
   return axiosClient.post("/courses", requestData);
 }
 

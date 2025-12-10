@@ -61,11 +61,8 @@ const TeacherClassList: React.FC = () => {
                     schedulePattern: cls.schedulePattern,
                     startDate: cls.startDate,
                     endDate: cls.endDate,
-                    totalStudents: cls.currentEnrollment, // Mapping currentEnrollment to totalStudents
-                    status: cls.status,
-                    progress: 0, // Not available in API yet
-                    totalSessions: 0, // Not available in API yet
-                    completedSessions: 0 // Not available in API yet
+                    totalStudents: cls.currentEnrollment,
+                    status: cls.status
                 }));
 
                 setClasses(mappedClasses);
@@ -285,28 +282,6 @@ const TeacherClassList: React.FC = () => {
                                                 </Typography>
                                             </Box>
                                         </Stack>
-
-                                        <Box sx={{ mt: "auto" }}>
-                                            <Box
-                                                sx={{
-                                                    display: "flex",
-                                                    justifyContent: "space-between",
-                                                    mb: 0.5,
-                                                }}
-                                            >
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Tiến độ
-                                                </Typography>
-                                                <Typography variant="caption" fontWeight="bold">
-                                                    {cls.completedSessions}/{cls.totalSessions} buổi ({cls.progress}%)
-                                                </Typography>
-                                            </Box>
-                                            <LinearProgress
-                                                variant="determinate"
-                                                value={cls.progress}
-                                                sx={{ height: 6, borderRadius: 3 }}
-                                            />
-                                        </Box>
                                     </CardContent>
                                     <Box sx={{ p: 2, pt: 0 }}>
                                         <Button

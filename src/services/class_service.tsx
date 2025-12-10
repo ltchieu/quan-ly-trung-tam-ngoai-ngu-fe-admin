@@ -75,14 +75,23 @@ export async function getRoomFilterList(): Promise<RoomFilterData[]> {
   }
 }
 
-export function createClass(request: ClassCreationRequest) {
-  return axiosClient.post<ApiResponse<any>>("/courseclasses", request);
+export async function createClass(request: ClassCreationRequest) {
+  console.log("Request Data for creating class:", request);
+  try {
+    const response = await axiosClient.post<ApiResponse<any>>("/courseclasses", request);
+    console.log("Create class API response:", response.data);
+    return response;
+  } catch (error: any) {
+    console.error("Create class API error:", error);
+    console.error("Error response:", error.response?.data);
+    console.error("Error status:", error.response?.status);
+    throw error;
+  }
 }
 
 export async function changeClassStatus(classId: number) {
   try {
     const response = await axiosClient.post(`/courseclasses/${classId}`);
-
     if (response.data && response.data.code === 1000) {
       return response.data;
     } else {
