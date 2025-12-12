@@ -914,11 +914,19 @@ const EditClass: React.FC = () => {
                             <TableCell align="center">
                               <Chip
                                 label={
-                                  session.status
+                                  session.status === "Completed"
                                     ? "Đã hoàn thành"
-                                    : "Chưa diễn ra"
+                                    : session.status === "Canceled"
+                                    ? "Đã hủy"
+                                    : "Chưa hoàn thành"
                                 }
-                                color={session.status ? "success" : "default"}
+                                color={
+                                  session.status === "Completed"
+                                    ? "success"
+                                    : session.status === "Canceled"
+                                    ? "error"
+                                    : "default"
+                                }
                                 size="small"
                                 variant="outlined"
                               />

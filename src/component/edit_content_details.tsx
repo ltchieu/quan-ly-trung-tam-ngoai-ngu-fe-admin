@@ -361,11 +361,6 @@ const EditContentDetails: React.FC<Props> = ({
       }
 
       const updateRequest: ModuleUpdateRequest = {
-        // moduleName: moduleToSave.moduleName, // Removing moduleName update from here as per Requirement, or keep it?
-        // Requirement says "Target and Program tab... allows updating module name... Detailed content tab allows updating more or the content".
-        // It doesn't explicitly FORBID sending moduleName here, but it's cleaner to just send contents/docs.
-        // However, the API might require moduleName? Let's assume it's optional in DTO.
-        // If I don't send it, logic in backend might be fine.
         contents: contentUpdates,
         documents: documentUpdates,
       };
