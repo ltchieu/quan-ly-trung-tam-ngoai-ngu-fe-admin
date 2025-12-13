@@ -44,7 +44,7 @@ const EditCourse: React.FC = () => {
             const courseIdNum = Number(id);
             const courseRes = await getCourseDetail(courseIdNum);
             const apiCourseData = courseRes.data.data as CourseDetailResponse;
-            console.log("image:", apiCourseData.image);
+           console.log("Fetched course data:", apiCourseData);
 
             if (apiCourseData.classInfos && apiCourseData.classInfos.length > 0) {
                 setHasOpenClasses(true);
@@ -186,6 +186,7 @@ const EditCourse: React.FC = () => {
                             initialModules={modules}
                             skillModules={skillModuleGroups}
                             objectives={courseBaseData.objectives || []}
+                            totalCourseHours={courseBaseData.studyHours || 0}
                             onModulesChange={handleDataNeedsRefresh}
                         />
                     }

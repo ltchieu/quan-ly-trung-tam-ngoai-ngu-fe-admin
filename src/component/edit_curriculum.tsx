@@ -14,13 +14,14 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { ModuleData } from '../model/module_model';
 import { SkillModuleGroup } from '../model/course_model';
-import { createModule, deleteModule, updateModule, updateObjective } from '../services/course_service';
+import { createModule, deleteModule, updateModuleBasicInfo, updateObjective } from '../services/course_service';
 
 interface Props {
     courseId: number;
     initialModules: ModuleData[];
     skillModules: SkillModuleGroup[];
     objectives: { id: number; objectiveName: string }[];
+    totalCourseHours: number;
     onModulesChange: () => void;
 }
 
@@ -30,7 +31,7 @@ interface EditingModuleState {
     duration: number;
 }
 
-const EditCurriculum: React.FC<Props> = ({ courseId, skillModules, objectives, onModulesChange }) => {
+const EditCurriculum: React.FC<Props> = ({ courseId, skillModules, objectives, totalCourseHours, onModulesChange }) => {
 
     // Removed generic newModule state in favor of per-skill adding or dialog
     const [newModuleOpen, setNewModuleOpen] = useState<{ skillId: number } | null>(null);
@@ -182,13 +183,19 @@ const EditCurriculum: React.FC<Props> = ({ courseId, skillModules, objectives, o
             alert("Tên module không được rỗng.");
             return;
         }
+        
+        if (editingModule.duration <= 0) {
+            alert("Thời lượng phải lớn hơn 0.");
+            return;
+        }
 
         setIsSubmitting(true);
         setModuleError(null);
         try {
 
-            await updateModule(editingModule.moduleId, {
+            await updateModuleBasicInfo(editingModule.moduleId, {
                 moduleName: editingModule.moduleName,
+                duration: editingModule.duration,
             });
             handleCloseEditDialog();
             setNotification({ open: true, message: "Cập nhật module thành công!", severity: 'success' });
@@ -203,12 +210,12 @@ const EditCurriculum: React.FC<Props> = ({ courseId, skillModules, objectives, o
 
     return (
         <Grid container spacing={4}>
-            <Grid size={{ xs: 12, md: 12 }}>
+            <Grid key="objectives-section" size={{ xs: 12, md: 12 }}>
                 <Typography variant="h6" gutterBottom>Mục tiêu khóa học</Typography>
                 {objectiveError && <Alert severity="error" sx={{ mb: 2 }}>{objectiveError}</Alert>}
                 <List dense>
                     {(objectives || []).map((item, index) => (
-                        <ListItem key={item.id || index} disableGutters
+                        <ListItem key={`objective-${item.id || index}`} disableGutters
                             secondaryAction={
                                 editingObjectiveId === item.id ? (
                                     <>
@@ -244,16 +251,35 @@ const EditCurriculum: React.FC<Props> = ({ courseId, skillModules, objectives, o
                 </List>
             </Grid>
 
-            <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+            <Divider key="divider" orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
 
             {/* Phần Module grouped by Skill */}
-            <Grid size={{ xs: 12, md: 12 }}>
+            <Grid key="modules-section" size={{ xs: 12, md: 12 }}>
                 <Typography variant="h6" gutterBottom>Chương trình học (Theo Kỹ Năng)</Typography>
 
                 {moduleError && <Alert severity="error" sx={{ mb: 2 }}>{moduleError}</Alert>}
+                
+                {(() => {
+                    const totalModuleHours = (skillModules || []).reduce((sum, group) => 
+                        sum + (group.modules || []).reduce((groupSum, mod) => groupSum + mod.duration, 0), 0
+                    );
+                    if (totalModuleHours !== totalCourseHours) {
+                        return (
+                            <Alert severity="warning" sx={{ mb: 2 }}>
+                                <Typography variant="body2" fontWeight="bold">
+                                    Tổng thời lượng modules ({totalModuleHours} giờ) không khớp với thời lượng khóa học ({totalCourseHours} giờ).
+                                </Typography>
+                                <Typography variant="caption">
+                                    Vui lòng điều chỉnh thời lượng các module để tổng bằng {totalCourseHours} giờ.
+                                </Typography>
+                            </Alert>
+                        );
+                    }
+                    return null;
+                })()}
 
                 {(skillModules || []).map((group) => (
-                    <Accordion key={group.skillId} defaultExpanded>
+                    <Accordion key={`skill-${group.skillId}`} defaultExpanded>
                         <AccordionSummary
                             expandIcon={<ExpandMoreIcon />}
                             aria-controls={`panel-${group.skillId}-content`}
@@ -269,7 +295,7 @@ const EditCurriculum: React.FC<Props> = ({ courseId, skillModules, objectives, o
                             <List dense>
                                 {(group.modules || []).map((item) => (
                                     <ListItem
-                                        key={item.moduleId}
+                                        key={`module-${item.moduleId}`}
                                         disableGutters
                                         secondaryAction={
                                             <>
@@ -365,6 +391,19 @@ const EditCurriculum: React.FC<Props> = ({ courseId, skillModules, objectives, o
                         value={editingModule?.moduleName || ''}
                         onChange={handleEditModuleChange}
                         sx={{ mt: 1 }}
+                        disabled={isSubmitting}
+                    />
+                    <TextField
+                        margin="dense"
+                        name="duration"
+                        label="Thời lượng (giờ)"
+                        type="number"
+                        fullWidth
+                        variant="outlined"
+                        value={editingModule?.duration || ''}
+                        onChange={handleEditModuleChange}
+                        InputProps={{ inputProps: { min: 1 } }}
+                        sx={{ mt: 2 }}
                         disabled={isSubmitting}
                     />
 

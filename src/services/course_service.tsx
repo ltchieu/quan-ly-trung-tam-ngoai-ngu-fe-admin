@@ -4,6 +4,7 @@ import {
   CourseCreateRequest,
   CourseUpdateRequest,
   ModuleUpdateRequest,
+  ModuleUpdateBasicInfoRequest,
   SkillResponse,
 } from "../model/course_model";
 import { ModuleData } from "../model/module_model";
@@ -33,12 +34,22 @@ export function getModulesByCourseId(courseId: number) {
   return axiosClient.get<ModuleData[]>("/modules", { params: { courseId } });
 }
 
-export function updateModule(
+// Update module detail (documents & contents)
+export function updateModuleDetail(
   moduleId: number,
   updateData: ModuleUpdateRequest
 ) {
-  console.log("Updating module:", moduleId, "Data:", updateData);
+  console.log("Updating module detail:", moduleId, "Data:", updateData);
   return axiosClient.put(`/modules/${moduleId}`, updateData);
+}
+
+// Update module basic info (name & duration)
+export function updateModuleBasicInfo(
+  moduleId: number,
+  updateData: ModuleUpdateBasicInfoRequest
+) {
+  console.log("Updating module basic info:", moduleId, "Data:", updateData);
+  return axiosClient.put(`/modules/${moduleId}/info`, updateData);
 }
 
 export function createModule(

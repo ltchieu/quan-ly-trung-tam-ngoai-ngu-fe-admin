@@ -28,7 +28,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import InputFileUpload from "./button_upload_file";
-import { updateModule } from "../services/course_service";
+import { updateModuleDetail } from "../services/course_service";
 import { getImageUrl } from "../services/file_service";
 import {
   ContentData,
@@ -365,7 +365,7 @@ const EditContentDetails: React.FC<Props> = ({
         documents: documentUpdates,
       };
 
-      await updateModule(moduleToSave.moduleId, updateRequest);
+      await updateModuleDetail(moduleToSave.moduleId, updateRequest);
       setSaveSuccess((prev) => ({ ...prev, [moduleToSave.moduleId]: "Cập nhật thành công!" }));
       setNotification({ open: true, message: "Cập nhật thành công!", severity: 'success' });
 

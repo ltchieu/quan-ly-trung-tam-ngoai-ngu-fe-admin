@@ -142,9 +142,13 @@ export interface DocumentUpdateRequest {
 }
 
 export interface ModuleUpdateRequest {
-  moduleName?: string;
   documents?: DocumentUpdateRequest[];
   contents?: ContentUpdateRequest[];
+}
+
+export interface ModuleUpdateBasicInfoRequest {
+  moduleName: string;
+  duration: number;
 }
 
 export interface SkillResponse {
