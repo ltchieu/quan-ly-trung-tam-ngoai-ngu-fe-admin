@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Card,
@@ -28,6 +28,9 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   DialogActions,
   Snackbar,
 } from "@mui/material";
@@ -43,6 +46,7 @@ import {
   Room as RoomIcon,
   AccessTime as AccessTimeIcon,
   People as PeopleIcon,
+  ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import useDebounce from "../../hook/useDebounce";
@@ -54,6 +58,11 @@ import { StudentSearchResult, PaymentMethod } from "../../model/enrollment_model
 import CreateStudentDialog from "../../component/create_student_dialog";
 import VNPayPaymentDialog from "../../component/vnpay_payment_dialog";
 
+// Extend ClassView với courseId để group classes
+interface ClassViewWithCourse extends ClassView {
+  courseId: number;
+}
+
 const steps = ["Chọn khóa học", "Chọn lớp học", "Chọn học viên", "Chọn phương thức thanh toán", "Xác nhận"];
 
 const EnrollStudent: React.FC = () => {
@@ -63,12 +72,12 @@ const EnrollStudent: React.FC = () => {
   
   // Data states
   const [courses, setCourses] = useState<CourseFilterData[]>([]);
-  const [classes, setClasses] = useState<ClassView[]>([]);
+  const [classes, setClasses] = useState<ClassViewWithCourse[]>([]);
   const [students, setStudents] = useState<StudentSearchResult[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   
   // Selection states
-  const [selectedCourse, setSelectedCourse] = useState<CourseFilterData | null>(null);
+  const [selectedCourses, setSelectedCourses] = useState<CourseFilterData[]>([]);
   const [selectedClass, setSelectedClass] = useState<ClassView | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<StudentSearchResult | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
@@ -94,21 +103,41 @@ const EnrollStudent: React.FC = () => {
   const [invoiceAmount, setInvoiceAmount] = useState<number>(0);
   const [invoiceExpiryTime, setInvoiceExpiryTime] = useState<string>("");
 
+  // Group classes by course using useMemo
+  const groupedClasses = useMemo(() => {
+    const groups: { [key: number]: { course: CourseFilterData; classes: ClassViewWithCourse[] } } = {};
+    
+    classes.forEach((cls) => {
+      const courseId = cls.courseId;
+      if (!groups[courseId]) {
+        const course = selectedCourses.find(c => c.courseId === courseId);
+        if (course) {
+          groups[courseId] = { course, classes: [] };
+        }
+      }
+      if (groups[courseId]) {
+        groups[courseId].classes.push(cls);
+      }
+    });
+    
+    return Object.values(groups);
+  }, [classes, selectedCourses]);
+
   // Load courses and payment methods on mount
   useEffect(() => {
     loadCourses();
     loadPaymentMethods();
   }, []);
 
-  // Load classes when course is selected
+  // Load classes when courses are selected
   useEffect(() => {
-    if (selectedCourse) {
-      loadClasses(selectedCourse.courseId);
+    if (selectedCourses.length > 0) {
+      loadClassesForMultipleCourses(selectedCourses.map(c => c.courseId));
     } else {
       setClasses([]);
       setSelectedClass(null);
     }
-  }, [selectedCourse]);
+  }, [selectedCourses]);
 
   // Search students when keyword changes
   useEffect(() => {
@@ -132,17 +161,34 @@ const EnrollStudent: React.FC = () => {
     }
   };
 
-  const loadClasses = async (courseId: number) => {
+  const loadClassesForMultipleCourses = async (courseIds: number[]) => {
     setLoadingClasses(true);
     setError(null);
     try {
-      const response = await filterClasses(null, null, courseId, null, 1, 100);
+      // Load classes for all selected courses
+      const classPromises = courseIds.map(courseId => 
+        filterClasses(null, null, courseId, null, 1, 100).then(response => ({
+          courseId,
+          response
+        }))
+      );
       
-      if (response && response.classes) {
-        setClasses(response.classes);
-      } else {
-        setClasses([]);
-      }
+      const results = await Promise.all(classPromises);
+      
+      // Combine all classes from all courses and add courseId to each class
+      const allClasses: ClassViewWithCourse[] = [];
+      results.forEach(({ courseId, response }) => {
+        if (response && response.classes) {
+          // Add courseId to each class
+          const classesWithCourseId = response.classes.map((cls: ClassView) => ({
+            ...cls,
+            courseId
+          } as ClassViewWithCourse));
+          allClasses.push(...classesWithCourseId);
+        }
+      });
+      
+      setClasses(allClasses);
     } catch (err: any) {
       setError(err.message || "Không thể tải danh sách lớp học");
       setClasses([]);
@@ -191,8 +237,8 @@ const EnrollStudent: React.FC = () => {
 
   const handleNext = () => {
     // Validate before moving to next step
-    if (activeStep === 0 && !selectedCourse) {
-      setError("Vui lòng chọn khóa học");
+    if (activeStep === 0 && selectedCourses.length === 0) {
+      setError("Vui lòng chọn ít nhất một khóa học");
       return;
     }
     if (activeStep === 1 && !selectedClass) {
@@ -223,7 +269,7 @@ const EnrollStudent: React.FC = () => {
 
   const handleReset = () => {
     setActiveStep(0);
-    setSelectedCourse(null);
+    setSelectedCourses([]);
     setSelectedClass(null);
     setSelectedStudent(null);
     setSelectedPaymentMethod(null);
@@ -310,31 +356,49 @@ const EnrollStudent: React.FC = () => {
                 <CircularProgress />
               </Box>
             ) : (
-              <FormControl fullWidth>
-                <InputLabel>Khóa học</InputLabel>
-                <Select
-                  value={selectedCourse?.courseId || ""}
-                  onChange={(e) => {
-                    const course = courses.find((c) => c.courseId === e.target.value);
-                    setSelectedCourse(course || null);
-                  }}
-                  label="Khóa học"
-                >
-                  {courses.map((course) => (
-                    <MenuItem key={course.courseId} value={course.courseId}>
-                      <Typography>{course.courseName}</Typography>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                multiple
+                options={courses}
+                value={selectedCourses}
+                onChange={(event, newValue) => {
+                  setSelectedCourses(newValue);
+                }}
+                getOptionLabel={(option) => option.courseName}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Chọn khóa học"
+                    placeholder="Tìm và chọn nhiều khóa học"
+                  />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      label={option.courseName}
+                      {...getTagProps({ index })}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  ))
+                }
+              />
             )}
 
-            {selectedCourse && (
+            {selectedCourses.length > 0 && (
               <Paper elevation={2} sx={{ mt: 3, p: 2, bgcolor: "primary.50" }}>
                 <Typography variant="subtitle2" color="primary" gutterBottom>
-                  Khóa học đã chọn
+                  Các khóa học đã chọn ({selectedCourses.length})
                 </Typography>
-                <Typography variant="h6">{selectedCourse.courseName}</Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}>
+                  {selectedCourses.map((course) => (
+                    <Chip
+                      key={course.courseId}
+                      label={course.courseName}
+                      color="primary"
+                      variant="filled"
+                    />
+                  ))}
+                </Box>
               </Paper>
             )}
           </Box>
@@ -348,7 +412,7 @@ const EnrollStudent: React.FC = () => {
               Chọn lớp học
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Chọn lớp học phù hợp từ khóa học <strong>{selectedCourse?.courseName}</strong>
+              Chọn lớp học phù hợp từ {selectedCourses.length} khóa học đã chọn
             </Typography>
 
             {loadingClasses ? (
@@ -356,102 +420,130 @@ const EnrollStudent: React.FC = () => {
                 <CircularProgress />
               </Box>
             ) : classes.length === 0 ? (
-              <Alert severity="info">Không có lớp học nào cho khóa học này</Alert>
+              <Alert severity="info">Không có lớp học nào cho các khóa học đã chọn</Alert>
             ) : (
-              <Grid container spacing={2}>
-                {classes.map((cls) => {
-                  const isFull = cls.currentEnrollment >= cls.maxCapacity;
-                  const isSelected = selectedClass?.classId === cls.classId;
-                  
-                  return (
-                  <Grid size={{ xs: 12 }} key={cls.classId}>
-                    <Paper
-                      elevation={isSelected ? 8 : 1}
-                      sx={{
-                        p: 2,
-                        cursor: isFull ? "not-allowed" : "pointer",
-                        border: isSelected ? "2px solid" : "1px solid",
-                        borderColor: isSelected ? "primary.main" : "divider",
-                        opacity: isFull ? 0.6 : 1,
-                        backgroundColor: isFull ? "action.disabledBackground" : "background.paper",
-                        transition: "all 0.3s",
-                        "&:hover": {
-                          elevation: isFull ? 1 : 4,
-                          borderColor: isFull ? "divider" : "primary.light",
-                        },
+              <Box>
+                {groupedClasses.map((group) => (
+                  <Accordion key={group.course.courseId} defaultExpanded={selectedCourses.length === 1}>
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon />}
+                      sx={{ 
+                        backgroundColor: 'primary.50',
+                        '&:hover': { backgroundColor: 'primary.100' }
                       }}
-                      onClick={() => !isFull && setSelectedClass(cls)}
                     >
-                      <Box display="flex" justifyContent="space-between" alignItems="start">
-                        <Box flex={1}>
-                          <Typography variant="h6" gutterBottom>
-                            {cls.className}
-                            {selectedClass?.classId === cls.classId && (
-                              <CheckCircleIcon
-                                color="primary"
-                                sx={{ ml: 1, verticalAlign: "middle" }}
-                              />
-                            )}
-                          </Typography>
-                          
-                          <Grid container spacing={1} sx={{ mt: 1 }}>
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <PersonIcon fontSize="small" color="action" />
-                                <Typography variant="body2">
-                                  Giảng viên: {cls.instructorName}
-                                </Typography>
-                              </Box>
-                            </Grid>
-                            
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <RoomIcon fontSize="small" color="action" />
-                                <Typography variant="body2">
-                                  Phòng: {cls.roomName}
-                                </Typography>
-                              </Box>
-                            </Grid>
-                            
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <AccessTimeIcon fontSize="small" color="action" />
-                                <Typography variant="body2">
-                                  Lịch: {cls.schedulePattern}
-                                </Typography>
-                              </Box>
-                            </Grid>
-                            
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <EventIcon fontSize="small" color="action" />
-                                <Typography variant="body2">
-                                  Giờ học: {cls.startTime} - {cls.endTime}
-                                </Typography>
-                              </Box>
-                            </Grid>
-                          </Grid>
-                        </Box>
-
-                        <Box textAlign="right">
-                          <Chip
-                            icon={<PeopleIcon />}
-                            label={`${cls.currentEnrollment}/${cls.maxCapacity}`}
-                            color={(cls.maxCapacity - cls.currentEnrollment) > 0 ? "success" : "error"}
-                            size="small"
-                          />
-                          <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                            {(cls.maxCapacity - cls.currentEnrollment) > 0
-                              ? `Còn ${cls.maxCapacity - cls.currentEnrollment} chỗ`
-                              : "Đã đầy"}
-                          </Typography>
-                        </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                        <SchoolIcon color="primary" />
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          {group.course.courseName}
+                        </Typography>
+                        <Chip 
+                          label={`${group.classes.length} lớp`} 
+                          size="small" 
+                          color="primary"
+                          variant="outlined"
+                        />
                       </Box>
-                    </Paper>
-                  </Grid>
-                  );
-                })}
-              </Grid>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ pt: 2 }}>
+                      <Grid container spacing={2}>
+                        {group.classes.map((cls) => {
+                          const isFull = cls.currentEnrollment >= cls.maxCapacity;
+                          const isSelected = selectedClass?.classId === cls.classId;
+                          
+                          return (
+                            <Grid size={{ xs: 12 }} key={cls.classId}>
+                              <Paper
+                                elevation={isSelected ? 8 : 1}
+                                sx={{
+                                  p: 2,
+                                  cursor: isFull ? "not-allowed" : "pointer",
+                                  border: isSelected ? "2px solid" : "1px solid",
+                                  borderColor: isSelected ? "primary.main" : "divider",
+                                  opacity: isFull ? 0.6 : 1,
+                                  backgroundColor: isFull ? "action.disabledBackground" : "background.paper",
+                                  transition: "all 0.3s",
+                                  "&:hover": {
+                                    elevation: isFull ? 1 : 4,
+                                    borderColor: isFull ? "divider" : "primary.light",
+                                  },
+                                }}
+                                onClick={() => !isFull && setSelectedClass(cls)}
+                              >
+                                <Box display="flex" justifyContent="space-between" alignItems="start">
+                                  <Box flex={1}>
+                                    <Typography variant="h6" gutterBottom>
+                                      {cls.className}
+                                      {selectedClass?.classId === cls.classId && (
+                                        <CheckCircleIcon
+                                          color="primary"
+                                          sx={{ ml: 1, verticalAlign: "middle" }}
+                                        />
+                                      )}
+                                    </Typography>
+                                    
+                                    <Grid container spacing={1} sx={{ mt: 1 }}>
+                                      <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                          <PersonIcon fontSize="small" color="action" />
+                                          <Typography variant="body2">
+                                            Giảng viên: {cls.instructorName}
+                                          </Typography>
+                                        </Box>
+                                      </Grid>
+                                      
+                                      <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                          <RoomIcon fontSize="small" color="action" />
+                                          <Typography variant="body2">
+                                            Phòng: {cls.roomName}
+                                          </Typography>
+                                        </Box>
+                                      </Grid>
+                                      
+                                      <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                          <AccessTimeIcon fontSize="small" color="action" />
+                                          <Typography variant="body2">
+                                            Lịch: {cls.schedulePattern}
+                                          </Typography>
+                                        </Box>
+                                      </Grid>
+                                      
+                                      <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                          <EventIcon fontSize="small" color="action" />
+                                          <Typography variant="body2">
+                                            Giờ học: {cls.startTime} - {cls.endTime}
+                                          </Typography>
+                                        </Box>
+                                      </Grid>
+                                    </Grid>
+                                  </Box>
+
+                                  <Box textAlign="right">
+                                    <Chip
+                                      icon={<PeopleIcon />}
+                                      label={`${cls.currentEnrollment}/${cls.maxCapacity}`}
+                                      color={(cls.maxCapacity - cls.currentEnrollment) > 0 ? "success" : "error"}
+                                      size="small"
+                                    />
+                                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                      {(cls.maxCapacity - cls.currentEnrollment) > 0
+                                        ? `Còn ${cls.maxCapacity - cls.currentEnrollment} chỗ`
+                                        : "Đã đầy"}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </Paper>
+                            </Grid>
+                          );
+                        })}
+                      </Grid>
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </Box>
             )}
           </Box>
         );
@@ -653,7 +745,7 @@ const EnrollStudent: React.FC = () => {
                 </ListItemAvatar>
                 <ListItemText
                   primary="Khóa học"
-                  secondary={selectedCourse?.courseName}
+                  secondary={selectedCourses.map(c => c.courseName).join(", ")}
                 />
               </ListItem>
               <Divider variant="inset" component="li" />
@@ -793,7 +885,7 @@ const EnrollStudent: React.FC = () => {
                 onClick={handleNext}
                 endIcon={activeStep === steps.length - 1 ? <CheckCircleIcon /> : <NavigateNextIcon />}
                 disabled={
-                  (activeStep === 0 && !selectedCourse) ||
+                  (activeStep === 0 && !selectedCourses) ||
                   (activeStep === 1 && !selectedClass) ||
                   (activeStep === 2 && !selectedStudent) ||
                   (activeStep === 3 && !selectedPaymentMethod)

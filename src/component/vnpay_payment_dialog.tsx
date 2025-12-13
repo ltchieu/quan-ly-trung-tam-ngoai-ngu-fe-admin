@@ -44,9 +44,20 @@ const VNPayPaymentDialog: React.FC<VNPayPaymentDialogProps> = ({
     if (!open) return;
 
     const calculateTimeLeft = () => {
-      const expiry = new Date(expiryTime);
-      const now = new Date();
-      const seconds = Math.floor((expiry.getTime() - now.getTime()) / 1000);
+      const expiryDate = new Date(expiryTime);
+      
+      // Get current time in UTC
+      const nowUTC = new Date();
+      
+      // Calculate difference in seconds
+      const seconds = Math.floor((expiryDate.getTime() - nowUTC.getTime()) / 1000);
+      
+      console.log('Payment expiry calculation:', {
+        expiryTime,
+        expiryDate: expiryDate.toISOString(),
+        nowUTC: nowUTC.toISOString(),
+        secondsLeft: seconds
+      });
       
       if (seconds <= 0) {
         setExpired(true);

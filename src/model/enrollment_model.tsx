@@ -11,10 +11,10 @@ export interface CourseRegistrationRequest {
 
 export interface InvoiceResponse {
   invoiceId: number;
-  dateCreated: string; // ISO 8601 format
-  status: boolean; // false: chưa thanh toán, true: đã thanh toán
+  dateCreated: string; 
+  status: boolean; 
   studentName: string;
-  studentId: string; // Mã học viên
+  studentId: string;
   paymentMethod: string;
   totalOriginalPrice: number;
   courseDiscountPercent: number;
@@ -25,7 +25,7 @@ export interface InvoiceResponse {
   returningDiscountAmount: number;
   totalDiscountPercent: number;
   totalDiscountAmount: number;
-  totalAmount: number; // Tổng số tiền phải thanh toán (sau giảm giá)
+  totalAmount: number;
   expiryTime: string; // ISO 8601 format - thời gian hết hạn thanh toán (15 phút sau khi tạo)
   details: InvoiceDetailResponse[];
 }
