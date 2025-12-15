@@ -4,6 +4,10 @@ type GetAccessTokenFn = () => string | null;
 type LogoutFn = () => void;
 type RefreshAccessTokenFn = () => Promise<string>;
 
+// Biến để đảm bảo chỉ có 1 request refresh token tại một thời điểm
+let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
+
 export const setupAxiosInterceptors = (
   getAccessToken: GetAccessTokenFn,
   logout: LogoutFn,

@@ -21,7 +21,9 @@ const PersistLogin = () => {
       } catch (error) {
         console.error("❌ PersistLogin: Token refresh failed", error);
       } finally {
-        isMounted && setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
     

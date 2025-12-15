@@ -393,14 +393,7 @@ const Timetable: React.FC = () => {
               >
                 {session.className}
               </Typography>
-              {isCanceled && (
-                <Chip 
-                  label="Cần bù" 
-                  size="small" 
-                  color="warning" 
-                  sx={{ height: 20, fontSize: '0.7rem', fontWeight: 'bold' }}
-                />
-              )}
+              
             </Box>
             <IconButton
               size="small"
