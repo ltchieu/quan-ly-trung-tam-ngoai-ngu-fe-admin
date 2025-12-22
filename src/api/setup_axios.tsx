@@ -4,6 +4,10 @@ type GetAccessTokenFn = () => string | null;
 type LogoutFn = () => void;
 type RefreshAccessTokenFn = () => Promise<string>;
 
+// Biến để đảm bảo chỉ có 1 request refresh token tại một thời điểm
+let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
+
 export const setupAxiosInterceptors = (
   getAccessToken: GetAccessTokenFn,
   logout: LogoutFn,
@@ -46,16 +50,36 @@ export const setupAxiosInterceptors = (
         console.log(`🔄 Attempting token refresh for ${url}...`);
 
         try {
-          const newAccessToken = await refreshAccessTokenFn();
+          // Nếu đang refresh, đợi request refresh hiện tại hoàn thành
+          if (isRefreshing && refreshPromise) {
+            console.log("⏳ Waiting for existing refresh to complete...");
+            const newAccessToken = await refreshPromise;
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+            console.log(`✅ Retrying ${url} with refreshed token`);
+            return axiosClient(originalRequest);
+          }
+
+          // Bắt đầu refresh mới
+          isRefreshing = true;
+          refreshPromise = refreshAccessTokenFn();
+          
+          const newAccessToken = await refreshPromise;
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          console.log(`✅ Retrying ${url} with new token`);
+          
+          console.log(`✅ Token refreshed, retrying ${url}`);
+          
           return axiosClient(originalRequest);
         } catch (err) {
           console.log(`❌ Token refresh failed, logging out`);
           logout();
           return Promise.reject(err);
+        } finally {
+          // Reset trạng thái sau khi hoàn thành
+          isRefreshing = false;
+          refreshPromise = null;
         }
       }
+      
       return Promise.reject(error);
     }
   );
