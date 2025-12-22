@@ -1,46 +1,112 @@
-# Getting Started with Create React App
+# Foreign Language Center Management System - Admin Portal
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Overview
 
-## Available Scripts
+Welcome to the **Foreign Language Center Management System (Admin Portal)**. This is a comprehensive web application designed to streamline the operations of a foreign language center. Built with **React** and **TypeScript**, this portal serves as the central hub for administrators, staff, and teachers to manage courses, students, schedules, financials, and academic performance efficiently.
 
-In the project directory, you can run:
+The system is tailored to enhance productivity by providing intuitive interfaces for complex administrative tasks and ensuring seamless communication between managing staff and the teaching faculty.
 
-### `npm start`
+## Key Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### 🏢 For Administrators & Staff
+The Admin interface provides robust tools to manage the center's core resources and operations:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+*   **Dashboard & Analytics**: Visualize key performance indicators, enrollment statistics, and revenue trends.
+*   **Student Management**: 
+    *   Full lifecycle management: Add, edit, and view student profiles.
+    *   Enrollment processing and class assignment.
+*   **Course & Class Management**:
+    *   Create and manage course categories and detailed course pathways.
+    *   Schedule classes, assign rooms, and manage capacity.
+*   **Teacher Management**:
+    *   Recruit and onboard new teachers.
+    *   Manage teacher profiles, qualifications, and employment details.
+*   **Financial & Promotions**:
+    *   Invoice generation and payment tracking.
+    *   Management of promotional campaigns and discounts.
+*   **Facilities Management**: Manage room availability and scheduling.
 
-### `npm test`
+### 👨‍🏫 For Teachers
+The Teacher Portal empowers instructors to focus on delivering quality education:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+*   **Personal Dashboard**: Quick view of upcoming schedules and active classes.
+*   **Class & Schedule Management**:
+    *   Access detailed class lists and student information.
+    *   View personal teaching schedules in real-time.
+*   **Academic Tools**:
+    *   **Attendance Tracking**: Digital attendance taking for every session.
+    *   **Score Management**: Input and manage student grades and assessment results.
+*   **Profile Management**: Update personal information and view teaching history.
 
-### `npm run build`
+## 🛠 Technology Stack
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+This project leverages a modern and robust technology stack to ensure performance, scalability, and developer experience:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+*   **Core Framework**: [React 18+](https://reactjs.org/) (with Hooks and Functional Components)
+*   **Language**: [TypeScript](https://www.typescriptlang.org/) (for static typing and code reliability)
+*   **UI Library**: [Material UI (MUI)](https://mui.com/) (for professional, responsive, and accessible components)
+*   **State Management & Data**: 
+    *   [Axios](https://axios-http.com/) (API integration)
+    *   Context API / Custom Hooks
+*   **Form Handling**: [Formik](https://formik.org/) & [Yup](https://github.com/jquense/yup) (Validation)
+*   **Date & Time**: [Day.js](https://day.js.org/)
+*   **Visualization**: [Chart.js](https://www.chartjs.org/) & [react-chartjs-2](https://react-chartjs-2.js.org/)
+*   **Others**: `jwt-decode` (Auth), `qrcode.react` (Check-in), `react-router-dom` (Navigation).
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 🚀 Getting Started
 
-### `npm run eject`
+Follow these steps to set up the project locally on your machine.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Prerequisites
+*   **Node.js** (v14 or higher recommended)
+*   **npm** or **yarn**
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Installation
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+1.  **Clone the repository**
+    ```bash
+    git clone <repository_url>
+    cd quan_ly_trung_tam_ngoai_ngu_admin
+    ```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+2.  **Install dependencies**
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
 
-## Learn More
+3.  **Environment Configuration**
+    *   Create a `.env` file in the root directory if it doesn't await exist.
+    *   Configure your API endpoints and other environment variables (e.g., `REACT_APP_API_URL`).
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Running the Application
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Start the development server:
+
+```bash
+npm start
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser. The page will reload if you make edits.
+
+## 📂 Project Structure
+
+```
+src/
+├── api/            # API configuration and interceptors
+├── auth/           # Authentication logic (Guards, Context)
+├── component/      # Reusable UI components
+├── hook/           # Custom React hooks
+├── model/          # TypeScript interfaces and types
+├── pages/          # Application pages (Views)
+│   ├── admin/      # Admin-facing pages
+│   └── teacher/    # Teacher-facing pages
+├── routes/         # Routing definition
+├── services/       # API integration services
+├── util/           # Utility functions
+└── layouts/        # Page layout wrappers (e.g., DashboardLayout)
+```
+
+---
+Designed and developed for high-efficiency educational management.
